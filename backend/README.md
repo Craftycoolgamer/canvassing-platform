@@ -6,6 +6,7 @@ A C# console application that provides a REST API for the canvassing platform.
 
 - **Companies Management**: CRUD operations for companies with customizable pin icons and colors
 - **Businesses Management**: CRUD operations for businesses with location data and status tracking
+- **Company Filtering**: Get businesses filtered by company ID for efficient data loading
 - **Sample Data**: Pre-loaded with sample companies and businesses for testing
 - **RESTful API**: Full REST API with proper HTTP status codes and JSON responses
 - **CORS Support**: Configured to allow cross-origin requests from the React Native app
@@ -53,10 +54,36 @@ The server will start on `http://localhost:3000` by default.
 
 ### Businesses
 - `GET /api/businesses` - Get all businesses
+- `GET /api/businesses/company/{companyId}` - Get businesses by company ID
 - `GET /api/businesses/{id}` - Get a specific business
 - `POST /api/businesses` - Create a new business
 - `PUT /api/businesses/{id}` - Update a business
 - `DELETE /api/businesses/{id}` - Delete a business
+
+## API Response Format
+
+All API endpoints return responses in the following format:
+
+```json
+{
+  "success": true,
+  "data": [...],
+  "error": null,
+  "message": "Optional message",
+  "timestamp": "2024-01-01T00:00:00.000Z"
+}
+```
+
+For error responses:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": "Error message",
+  "message": null,
+  "timestamp": "2024-01-01T00:00:00.000Z"
+}
+```
 
 ## Sample Data
 
@@ -116,4 +143,10 @@ curl http://localhost:3000/api/companies
 
 # Get all businesses
 curl http://localhost:3000/api/businesses
+
+# Get businesses for a specific company
+curl http://localhost:3000/api/businesses/company/sample-company-1
+
+# Get a specific business
+curl http://localhost:3000/api/businesses/sample-business-1
 ``` 

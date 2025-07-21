@@ -10,6 +10,8 @@ A modern React Native application for managing canvassing operations with map vi
 - **Cross-Platform**: Works on Android, iOS, and Web
 - **Offline Support**: Local data storage with AsyncStorage
 - **Modern UI**: Clean, intuitive interface with Material Design
+- **Company Filtering**: Filter businesses by selected company
+- **Real-time Updates**: Automatic refresh when company selection changes
 
 ## Screens
 
@@ -19,6 +21,7 @@ A modern React Native application for managing canvassing operations with map vi
 - Tap pins to view business details
 - Edit and delete businesses directly from map
 - User location tracking
+- Company-based business filtering
 
 ### 2. Business List Screen
 - Card-based business display
@@ -26,12 +29,14 @@ A modern React Native application for managing canvassing operations with map vi
 - Status filtering (Pending, Contacted, Completed, Not Interested)
 - Add new businesses with floating action button
 - Edit businesses by tapping cards
+- Company-based business filtering
 
 ### 3. Settings Screen
 - Company management
 - Custom pin icons and colors
 - Add, edit, and delete companies
 - Visual icon and color picker
+- Company selection for filtering
 
 ## Tech Stack
 
@@ -39,15 +44,16 @@ A modern React Native application for managing canvassing operations with map vi
 - **React Native** with Expo
 - **TypeScript** for type safety
 - **React Navigation** for routing
-- **React Native Maps** for map functionality
+- **React Native WebView** for map functionality (OpenStreetMap)
 - **Expo Location** for GPS services
 - **AsyncStorage** for local data persistence
 
 ### Backend
-- **Node.js** with Express
+- **.NET 8** with ASP.NET Core Minimal APIs
+- **C#** for server-side logic
 - **CORS** for cross-origin requests
-- **UUID** for unique ID generation
-- **In-memory storage** (can be replaced with database)
+- **In-memory storage** using ConcurrentDictionary
+- **Newtonsoft.Json** for JSON serialization
 
 ## Installation
 
@@ -55,6 +61,7 @@ A modern React Native application for managing canvassing operations with map vi
 - Node.js (v14 or higher)
 - npm or yarn
 - Expo CLI (`npm install -g @expo/cli`)
+- .NET 8.0 SDK
 
 ### Frontend Setup
 
@@ -92,18 +99,19 @@ npm run web
 cd backend
 ```
 
-2. Install dependencies:
+2. Restore dependencies:
 ```bash
-npm install
+dotnet restore
 ```
 
-3. Start the server:
+3. Build the project:
 ```bash
-# Development mode
-npm run dev
+dotnet build
+```
 
-# Production mode
-npm start
+4. Start the server:
+```bash
+dotnet run
 ```
 
 The backend will run on `http://localhost:3000`
@@ -122,11 +130,11 @@ For production, replace with your actual backend URL.
 
 ### Map Configuration
 
-The app uses Google Maps by default. For production, you'll need to:
+The app uses OpenStreetMap via WebView, which doesn't require API keys. For production, you can:
 
-1. Get a Google Maps API key
-2. Configure it in your Expo app.json
-3. Set up billing for Google Maps API
+1. Use the current OpenStreetMap implementation (free)
+2. Switch to Google Maps or other map providers
+3. Configure custom map tiles
 
 ## Usage
 
@@ -137,6 +145,13 @@ The app uses Google Maps by default. For production, you'll need to:
 3. Enter company name
 4. Select a pin icon and color
 5. Save the company
+
+### Selecting a Company
+
+1. Go to the Settings tab
+2. Tap "Select a company"
+3. Choose a company from the list
+4. The app will automatically filter businesses for that company
 
 ### Adding Businesses
 
@@ -165,6 +180,7 @@ The app uses Google Maps by default. For production, you'll need to:
 - **Business Details**: Tap pins to view full business information
 - **Edit/Delete**: Manage businesses directly from the map
 - **User Location**: Shows your current position on the map
+- **Company Filtering**: Only shows businesses for the selected company
 
 ## Data Structure
 
@@ -204,17 +220,21 @@ interface Business {
 
 ### Companies
 - `GET /api/companies` - Get all companies
-- `GET /api/companies/:id` - Get specific company
+- `GET /api/companies/{id}` - Get specific company
 - `POST /api/companies` - Create new company
-- `PUT /api/companies/:id` - Update company
-- `DELETE /api/companies/:id` - Delete company
+- `PUT /api/companies/{id}` - Update company
+- `DELETE /api/companies/{id}` - Delete company
 
 ### Businesses
 - `GET /api/businesses` - Get all businesses
-- `GET /api/businesses/:id` - Get specific business
+- `GET /api/businesses/company/{companyId}` - Get businesses by company ID
+- `GET /api/businesses/{id}` - Get specific business
 - `POST /api/businesses` - Create new business
-- `PUT /api/businesses/:id` - Update business
-- `DELETE /api/businesses/:id` - Delete business
+- `PUT /api/businesses/{id}` - Update business
+- `DELETE /api/businesses/{id}` - Delete business
+
+### Health Check
+- `GET /api/health` - Check if the API is running
 
 ## Development
 
@@ -228,7 +248,10 @@ canvassing-platform/
 │   ├── types/          # TypeScript type definitions
 │   ├── utils/          # Utility functions
 │   └── navigation/     # Navigation configuration
-├── backend/            # Express server
+├── backend/            # .NET 8 API server
+│   ├── Models/         # C# model classes
+│   ├── Services/       # Business logic services
+│   └── Program.cs      # API endpoints
 ├── assets/             # Static assets
 └── App.tsx            # Main app component
 ```
@@ -237,7 +260,7 @@ canvassing-platform/
 
 1. **New Screen**: Create in `src/screens/`
 2. **New Component**: Create in `src/components/`
-3. **New API Endpoint**: Add to `backend/server.js`
+3. **New API Endpoint**: Add to `backend/Program.cs`
 4. **New Type**: Add to `src/types/index.ts`
 
 ## Deployment
@@ -252,10 +275,32 @@ expo build:web
 
 2. Deploy to app stores or web hosting
 
-### Backend
-1. Deploy to your preferred hosting service (Heroku, AWS, etc.)
-2. Update the API base URL in the frontend
-3. Set up environment variables for production
+### Backend (.NET)
+1. Build for production:
+```bash
+dotnet publish -c Release
+```
+
+2. Deploy to your preferred hosting service (Azure, AWS, etc.)
+3. Update the API base URL in the frontend
+4. Set up environment variables for production
+
+## Sample Data
+
+The backend comes pre-loaded with sample data:
+
+**Companies:**
+- Sample Company (3 businesses)
+- Retail Chain (3 businesses)
+- Restaurant Group (3 businesses)
+- Tech Startups (3 businesses)
+- Healthcare Providers (3 businesses)
+
+**Business Statuses:**
+- `pending` - Orange
+- `contacted` - Blue
+- `completed` - Green
+- `not-interested` - Red
 
 ## Contributing
 
@@ -278,7 +323,7 @@ For issues and questions:
 
 ## Roadmap
 
-- [ ] Database integration (PostgreSQL/MongoDB)
+- [ ] Database integration (SQL Server/PostgreSQL)
 - [ ] User authentication and authorization
 - [ ] Real-time synchronization
 - [ ] Advanced analytics and reporting
