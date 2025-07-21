@@ -5,17 +5,41 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { CompanySelector } from '../components/CompanySelector';
 import { useFocusEffect } from '@react-navigation/native';
+import { useAuth } from '../contexts/AuthContext';
 
 export const SettingsScreen: React.FC = () => {
   const [showCompanySelector, setShowCompanySelector] = useState(false);
+  const { user, logout } = useAuth();
 
   const handleCompanyChange = () => {
     // This will trigger a refresh of data in other screens when they come into focus
     console.log('Company selection changed, other screens will refresh on focus');
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logout();
+            } catch (error) {
+              console.error('Logout error:', error);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -26,15 +50,40 @@ export const SettingsScreen: React.FC = () => {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Companies Section */}
-        <TouchableOpacity onPress={() => setShowCompanySelector(!showCompanySelector)}>
+        {/* User Information */}
+        {user && (
           <View style={styles.section}>
-            {showCompanySelector? <CompanySelector showActions={false} onCompanyChange={handleCompanyChange}/> : <Text style={styles.sectionTitle} >Select a company</Text>}
+            <Text style={styles.sectionTitle}>User Information</Text>
+            <View style={styles.userInfo}>
+              <View style={styles.userAvatar}>
+                <MaterialIcons name="person" size={24} color="white" />
+              </View>
+              <View style={styles.userDetails}>
+                <Text style={styles.userName}>{user.firstName} {user.lastName}</Text>
+                <Text style={styles.userEmail}>{user.email}</Text>
+                <Text style={styles.userRole}>Role: {user.role}</Text>
+              </View>
+            </View>
           </View>
-        </TouchableOpacity>
+        )}
+
+        {/* Logout Section */}
+        <View style={styles.section}>
+          {/* Companies Section */}
+          <TouchableOpacity onPress={() => setShowCompanySelector(!showCompanySelector)}>
+            {showCompanySelector ? (
+                  <CompanySelector showActions={false} onCompanyChange={handleCompanyChange} />
+            ) : (
+              <Text style={styles.companyText}>Select a company</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <MaterialIcons name="logout" size={20} color="#FF3B30" />
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
-
-
     </View>
   );
 };
@@ -73,70 +122,68 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#1a1a1a',
-    marginBottom: 4,
-    alignItems: 'center',
-    textAlign: 'center',
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: '#666',
     marginBottom: 16,
   },
-  sectionHeader: {
+  userInfo: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
   },
-  addButton: {
+  userAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#007AFF',
-    borderRadius: 20,
-    width: 40,
-    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 12,
   },
-  selectedCompanyContainer: {
+  userDetails: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: 4,
+  },
+  userEmail: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 2,
+  },
+  userRole: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  companySection: {
+    alignItems: 'center',
+  },
+  companyText: {
+    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    borderRadius: 8,
+    padding: 12,
+  },
+  logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
     backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 16,
-  },
-  selectedCompanyInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-
-  selectedCompanySubtext: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-  },
-  clearButton: {
-    padding: 8,
-  },
-  noSelectionContainer: {
-    alignItems: 'center',
-    padding: 24,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-  },
-  noSelectionText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#666',
-    marginTop: 8,
-  },
-  noSelectionSubtext: {
-    fontSize: 14,
-    color: '#999',
-    marginTop: 4,
-  },
-  toggleButton: {
-    padding: 8,
     borderRadius: 8,
-    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#FF3B30',
+    marginTop: 10,
   },
-
+  logoutText: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: '#FF3B30',
+    fontWeight: '500',
+  },
 }); 

@@ -22,3 +22,12 @@ C:\Users\quinn\canvassing-platform\backend\obj\Debug\net8.0\refint\CanvassingBac
 C:\Users\quinn\canvassing-platform\backend\obj\Debug\net8.0\CanvassingBackend.pdb
 C:\Users\quinn\canvassing-platform\backend\obj\Debug\net8.0\CanvassingBackend.genruntimeconfig.cache
 C:\Users\quinn\canvassing-platform\backend\obj\Debug\net8.0\ref\CanvassingBackend.dll
+C:\Users\quinn\canvassing-platform\backend\obj\Debug\net8.0\CanvassingBackend.sourcelink.json
+C:\Users\quinn\canvassing-platform\backend\bin\Debug\net8.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+C:\Users\quinn\canvassing-platform\backend\bin\Debug\net8.0\Microsoft.IdentityModel.Abstractions.dll
+C:\Users\quinn\canvassing-platform\backend\bin\Debug\net8.0\Microsoft.IdentityModel.JsonWebTokens.dll
+C:\Users\quinn\canvassing-platform\backend\bin\Debug\net8.0\Microsoft.IdentityModel.Logging.dll
+C:\Users\quinn\canvassing-platform\backend\bin\Debug\net8.0\Microsoft.IdentityModel.Protocols.dll
+C:\Users\quinn\canvassing-platform\backend\bin\Debug\net8.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+C:\Users\quinn\canvassing-platform\backend\bin\Debug\net8.0\Microsoft.IdentityModel.Tokens.dll
+C:\Users\quinn\canvassing-platform\backend\bin\Debug\net8.0\System.IdentityModel.Tokens.Jwt.dll

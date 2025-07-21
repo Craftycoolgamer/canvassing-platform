@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
 
 namespace CanvassingBackend
 {
@@ -16,6 +17,8 @@ namespace CanvassingBackend
 
             // Add services
             builder.Services.AddSingleton<DataService>();
+            builder.Services.AddSingleton<AuthService>();
+
             builder.Services.AddCors(options =>
             {
                 options.AddDefaultPolicy(policy =>
@@ -41,6 +44,56 @@ namespace CanvassingBackend
                     Message = "Canvassing API is running",
                     Data = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
                 });
+            });
+
+            // Authentication endpoints
+            app.MapPost("/api/auth/login", (LoginRequest request, AuthService authService) =>
+            {
+                var response = authService.Login(request);
+                if (response == null)
+                    return Results.Unauthorized();
+
+                return Results.Ok(ApiResponse<AuthResponse>.SuccessResponse(response));
+            });
+
+            app.MapPost("/api/auth/register", (RegisterRequest request, AuthService authService) =>
+            {
+                var response = authService.Register(request);
+                if (response == null)
+                    return Results.BadRequest(ApiResponse<AuthResponse>.ErrorResponse("User already exists"));
+
+                return Results.Created($"/api/auth/register", ApiResponse<AuthResponse>.SuccessResponse(response));
+            });
+
+            app.MapPost("/api/auth/refresh", (RefreshTokenRequest request, AuthService authService) =>
+            {
+                var response = authService.RefreshToken(request);
+                if (response == null)
+                    return Results.Unauthorized();
+
+                return Results.Ok(ApiResponse<AuthResponse>.SuccessResponse(response));
+            });
+
+            app.MapPost("/api/auth/logout", (RefreshTokenRequest request, AuthService authService) =>
+            {
+                authService.RevokeToken(request.RefreshToken);
+                return Results.Ok(ApiResponse<object>.SuccessResponse((object?)null));
+            });
+
+            // User management endpoints
+            app.MapGet("/api/users", (DataService dataService) =>
+            {
+                var users = dataService.GetAllUsers();
+                return Results.Ok(ApiResponse<List<User>>.SuccessResponse(users));
+            });
+
+            app.MapGet("/api/users/{id}", (string id, DataService dataService) =>
+            {
+                var user = dataService.GetUserById(id);
+                if (user == null)
+                    return Results.NotFound(ApiResponse<User>.ErrorResponse("User not found"));
+
+                return Results.Ok(ApiResponse<User>.SuccessResponse(user));
             });
 
             // Companies endpoints

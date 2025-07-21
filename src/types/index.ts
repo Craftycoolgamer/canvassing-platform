@@ -24,6 +24,46 @@ export interface Business {
   updatedAt: string;
 }
 
+export interface User {
+  id: string;
+  email: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  role: 'Admin' | 'Manager' | 'User';
+  companyId?: string;
+  isActive: boolean;
+  lastLoginAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  password: string;
+  companyId?: string;
+  confirmPassword?: string; // For frontend validation only
+}
+
+export interface AuthResponse {
+  token: string;
+  refreshToken: string;
+  expiresAt: string;
+  user: User;
+}
+
+export interface RefreshTokenRequest {
+  refreshToken: string;
+}
+
 export interface MapPin {
   id: string;
   coordinate: {

@@ -7,6 +7,7 @@ namespace CanvassingBackend.Services
     {
         private readonly ConcurrentDictionary<string, Company> _companies = new();
         private readonly ConcurrentDictionary<string, Business> _businesses = new();
+        private readonly ConcurrentDictionary<string, User> _users = new();
 
         public DataService()
         {
@@ -329,7 +330,72 @@ namespace CanvassingBackend.Services
                 _businesses.TryAdd(business.Id, business);
             }
 
-            Console.WriteLine($"Sample data added: {_companies.Count} companies, {_businesses.Count} businesses");
+            // Add sample users
+            var sampleUsers = new List<User>
+            {
+                new User
+                {
+                    Id = "admin-user-1",
+                    Email = "admin@canvassing.com",
+                    Username = "admin",
+                    FirstName = "Admin",
+                    LastName = "User",
+                    PasswordHash = "jGl25bVBBBW96Qi9Te4V37Fnqchz/Eu4qB9vKrRIqRg=", // "admin123"
+                    Role = "Admin",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new User
+                {
+                    Id = "manager-user-1",
+                    Email = "manager@canvassing.com",
+                    Username = "manager",
+                    FirstName = "Manager",
+                    LastName = "User",
+                    PasswordHash = "jGl25bVBBBW96Qi9Te4V37Fnqchz/Eu4qB9vKrRIqRg=", // "admin123"
+                    Role = "Manager",
+                    CompanyId = "sample-company-1",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new User
+                {
+                    Id = "user-1",
+                    Email = "user@canvassing.com",
+                    Username = "user",
+                    FirstName = "Regular",
+                    LastName = "User",
+                    PasswordHash = "jGl25bVBBBW96Qi9Te4V37Fnqchz/Eu4qB9vKrRIqRg=", // "admin123"
+                    Role = "User",
+                    CompanyId = "sample-company-1",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new User
+                {
+                    Id = "4a672c97-8b1f-409a-8158-3dddd4a8f63f",
+                    Email = "craftycoolgamer@gmail.com",
+                    Username = "crafty",
+                    FirstName = "Quinn",
+                    LastName = "Prisbrey",
+                    PasswordHash = "cPVmKogQy1JuibMKilRj8FF2ynWVOWf4MHqKV0jnQ3k=",
+                    Role = "Admin",
+                    CompanyId = null,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                }
+            };
+
+            foreach (var user in sampleUsers)
+            {
+                _users.TryAdd(user.Id, user);
+            }
+
+            Console.WriteLine($"Sample data added: {_companies.Count} companies, {_businesses.Count} businesses, {_users.Count} users");
         }
 
         // Company methods
@@ -411,5 +477,40 @@ namespace CanvassingBackend.Services
         }
 
         public bool DeleteBusiness(string id) => _businesses.TryRemove(id, out _);
+
+        // User methods
+        public List<User> GetAllUsers() => _users.Values.ToList();
+
+        public User? GetUserById(string id) => _users.TryGetValue(id, out var user) ? user : null;
+
+        public User? GetUserByEmail(string email) => _users.Values.FirstOrDefault(u => u.Email == email);
+
+        public User CreateUser(User user)
+        {
+            user.Id = Guid.NewGuid().ToString();
+            user.CreatedAt = DateTime.UtcNow;
+            user.UpdatedAt = DateTime.UtcNow;
+            _users.TryAdd(user.Id, user);
+            return user;
+        }
+
+        public User? UpdateUser(User user)
+        {
+            if (!_users.TryGetValue(user.Id, out var existingUser))
+                return null;
+
+            existingUser.Email = user.Email;
+            existingUser.Username = user.Username;
+            existingUser.FirstName = user.FirstName;
+            existingUser.LastName = user.LastName;
+            existingUser.Role = user.Role;
+            existingUser.CompanyId = user.CompanyId;
+            existingUser.IsActive = user.IsActive;
+            existingUser.LastLoginAt = user.LastLoginAt;
+            existingUser.UpdatedAt = DateTime.UtcNow;
+            return existingUser;
+        }
+
+        public bool DeleteUser(string id) => _users.TryRemove(id, out _);
     }
 } 
