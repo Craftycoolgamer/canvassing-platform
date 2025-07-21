@@ -1,6 +1,20 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User } from '../types';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import AuthService from '../services/authService';
+
+interface User {
+  id: string;
+  email: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  role: 'Admin' | 'Manager' | 'User';
+  companyId?: string;
+  isActive: boolean;
+  lastLoginAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface AuthContextType {
   user: User | null;
@@ -14,13 +28,19 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const isAuthenticated = !!user;
 
   useEffect(() => {
     checkAuthStatus();
@@ -28,13 +48,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const checkAuthStatus = async () => {
     try {
-      const isAuth = await AuthService.isAuthenticated();
-      if (isAuth) {
-        const currentUser = await AuthService.getCurrentUser();
+      const currentUser = await AuthService.getCurrentUser();
+      if (currentUser) {
         setUser(currentUser);
       }
     } catch (error) {
-      console.error('Error checking auth status:', error);
+      console.error('AuthContext: Error checking auth status:', error);
     } finally {
       setIsLoading(false);
     }
@@ -46,7 +65,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await AuthService.login(email, password);
       if (response.success && response.data) {
         console.log('AuthContext: Login successful, updating user state');
-        setUser(response.data.user);
+        const loggedInUser = response.data.user;
+        setUser(loggedInUser);
+        
+        // Set the selected company ID to the user's company ID if they have one
+        if (loggedInUser.companyId) {
+          console.log('AuthContext: Setting selected company ID to user company ID:', loggedInUser.companyId);
+          await AsyncStorage.setItem('selectedCompanyId', loggedInUser.companyId);
+        }
+        
         return true;
       }
       console.log('AuthContext: Login failed');
@@ -63,7 +90,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await AuthService.register(userData);
       if (response.success && response.data) {
         console.log('AuthContext: Registration successful, updating user state');
-        setUser(response.data.user);
+        const registeredUser = response.data.user;
+        setUser(registeredUser);
+        
+        // Set the selected company ID to the user's company ID if they have one
+        if (registeredUser.companyId) {
+          console.log('AuthContext: Setting selected company ID to user company ID:', registeredUser.companyId);
+          await AsyncStorage.setItem('selectedCompanyId', registeredUser.companyId);
+        }
+        
         return true;
       }
       console.log('AuthContext: Registration failed');
@@ -74,51 +109,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = async (): Promise<void> => {
+  const logout = async () => {
     try {
       await AuthService.logout();
       setUser(null);
+      // Clear the selected company ID when logging out
+      await AsyncStorage.removeItem('selectedCompanyId');
     } catch (error) {
-      console.error('Logout error:', error);
-      setUser(null);
+      console.error('AuthContext: Logout error:', error);
     }
   };
 
-  const refreshAuth = async (): Promise<void> => {
-    try {
-      const response = await AuthService.refreshToken();
-      if (response.success && response.data) {
-        setUser(response.data.user);
-      } else {
-        setUser(null);
-      }
-    } catch (error) {
-      console.error('Refresh auth error:', error);
-      setUser(null);
-    }
-  };
-
-  const value: AuthContextType = {
-    user,
-    isLoading,
-    isAuthenticated: !!user,
-    login,
-    register,
-    logout,
-    refreshAuth,
+  const refreshAuth = async () => {
+    await checkAuthStatus();
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{
+      user,
+      isLoading,
+      isAuthenticated,
+      login,
+      register,
+      logout,
+      refreshAuth,
+    }}>
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 }; 

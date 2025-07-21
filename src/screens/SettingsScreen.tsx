@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,10 +11,32 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { CompanySelector } from '../components/CompanySelector';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
+import { apiService } from '../services/api';
+import { Company } from '../types';
 
 export const SettingsScreen: React.FC = () => {
   const [showCompanySelector, setShowCompanySelector] = useState(false);
+  const [showLogout, setShowLogout] = useState(false);
+  const [userCompany, setUserCompany] = useState<Company | null>(null);
   const { user, logout } = useAuth();
+
+  const loadUserCompany = async () => {
+    if (user?.companyId) {
+      try {
+        const companiesResponse = await apiService.getCompanies();
+        if (companiesResponse.success && companiesResponse.data) {
+          const company = companiesResponse.data.find(c => c.id === user.companyId);
+          setUserCompany(company || null);
+        }
+      } catch (error) {
+        console.error('Error loading user company:', error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    loadUserCompany();
+  }, [user?.companyId]);
 
   const handleCompanyChange = () => {
     // This will trigger a refresh of data in other screens when they come into focus
@@ -50,39 +72,52 @@ export const SettingsScreen: React.FC = () => {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* User Information */}
-        {user && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>User Information</Text>
+        
+        
+        <TouchableOpacity style={styles.section} onPress={() => setShowLogout(!showLogout)}>
+          {/* User Information */}
+          {user && (
             <View style={styles.userInfo}>
-              <View style={styles.userAvatar}>
-                <MaterialIcons name="person" size={24} color="white" />
-              </View>
-              <View style={styles.userDetails}>
-                <Text style={styles.userName}>{user.firstName} {user.lastName}</Text>
-                <Text style={styles.userEmail}>{user.email}</Text>
-                <Text style={styles.userRole}>Role: {user.role}</Text>
-              </View>
+            <View style={styles.userAvatar}>
+              <MaterialIcons name="person" size={24} color="white" />
+            </View>
+            <View style={styles.userDetails}>
+              <Text style={styles.userName}>{user.firstName} {user.lastName}</Text>
+              <Text style={styles.userEmail}>{user.email}</Text>
+              <Text style={styles.userRole}>Role: {user.role}</Text>
+              {user.role !== 'Admin' && (
+                <Text style={styles.userEmail}>
+                  Company: {userCompany ? userCompany.name : user.companyId }
+                </Text>
+              )}
             </View>
           </View>
-        )}
+          )}
 
-        {/* Logout Section */}
-        <View style={styles.section}>
-          {/* Companies Section */}
-          <TouchableOpacity onPress={() => setShowCompanySelector(!showCompanySelector)}>
+
+          {showLogout && (
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <MaterialIcons name="logout" size={20} color="#FF3B30" />
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
+          )}
+
+          
+        </TouchableOpacity>
+        
+
+        {/* Companies Section - Only show if user doesn't have a company assigned */}
+        {!user?.companyId && (
+          <TouchableOpacity  onPress={() => setShowCompanySelector(!showCompanySelector)}>
             {showCompanySelector ? (
-                  <CompanySelector showActions={false} onCompanyChange={handleCompanyChange} />
+              <View style={styles.companySection}>
+                <CompanySelector onCompanyChange={handleCompanyChange} />
+              </View>
             ) : (
-              <Text style={styles.companyText}>Select a company</Text>
+              <Text style={styles.companyText}>Company Menu</Text>
             )}
           </TouchableOpacity>
-
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <MaterialIcons name="logout" size={20} color="#FF3B30" />
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -157,13 +192,16 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   companySection: {
-    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
   },
   companyText: {
     textAlign: 'center',
     fontSize: 18,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: '#007AFF',
     borderWidth: 1,
     borderColor: '#007AFF',
     borderRadius: 8,
@@ -174,7 +212,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
-    backgroundColor: '#f8f9fa',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#FF3B30',

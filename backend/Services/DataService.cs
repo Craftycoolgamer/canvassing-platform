@@ -340,7 +340,7 @@ namespace CanvassingBackend.Services
                     Username = "admin",
                     FirstName = "Admin",
                     LastName = "User",
-                    PasswordHash = "jGl25bVBBBW96Qi9Te4V37Fnqchz/Eu4qB9vKrRIqRg=", // "admin123"
+                    PasswordHash = "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk=", // "admin123"
                     Role = "Admin",
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
@@ -353,7 +353,7 @@ namespace CanvassingBackend.Services
                     Username = "manager",
                     FirstName = "Manager",
                     LastName = "User",
-                    PasswordHash = "jGl25bVBBBW96Qi9Te4V37Fnqchz/Eu4qB9vKrRIqRg=", // "admin123"
+                    PasswordHash = "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk=", // "admin123"
                     Role = "Manager",
                     CompanyId = "sample-company-1",
                     IsActive = true,
@@ -367,9 +367,37 @@ namespace CanvassingBackend.Services
                     Username = "user",
                     FirstName = "Regular",
                     LastName = "User",
-                    PasswordHash = "jGl25bVBBBW96Qi9Te4V37Fnqchz/Eu4qB9vKrRIqRg=", // "admin123"
+                    PasswordHash = "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk=", // "admin123"
                     Role = "User",
                     CompanyId = "sample-company-1",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new User
+                {
+                    Id = "user-2",
+                    Email = "user2@canvassing.com",
+                    Username = "user2",
+                    FirstName = "Regular",
+                    LastName = "User2",
+                    PasswordHash = "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk=", // "admin123"
+                    Role = "User",
+                    CompanyId = "retail-chain-1",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new User
+                {
+                    Id = "user-3",
+                    Email = "user3@canvassing.com",
+                    Username = "user3",
+                    FirstName = "Regular",
+                    LastName = "User3",
+                    PasswordHash = "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk=", // "admin123"
+                    Role = "User",
+                    CompanyId = "restaurant-group-1",
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow

@@ -17,13 +17,11 @@ import { StorageService } from '../services/storage';
 
 interface CompanySelectorProps {
   onCompanySelect?: (company: Company) => void;
-  showActions?: boolean;
   onCompanyChange?: () => void;
 }
 
 export const CompanySelector: React.FC<CompanySelectorProps> = ({
   onCompanySelect,
-  showActions = true,
   onCompanyChange,
 }) => {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -265,23 +263,21 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
               </View>
             </TouchableOpacity>
             
-            {showActions && (
-              <View style={styles.companyActions}>
-                <TouchableOpacity
-                  style={styles.editButton}
-                  onPress={() => handleEditCompany(company)}
-                >
-                  <MaterialIcons name="edit" size={20} color="#007AFF" />
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => handleDeleteCompany(company)}
-                >
-                  <MaterialIcons name="delete" size={20} color="#FF3B30" />
-                </TouchableOpacity>
-              </View>
-            )}
+            <View style={styles.companyActions}>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={() => handleEditCompany(company)}
+              >
+                <MaterialIcons name="edit" size={20} color="#007AFF" />
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => handleDeleteCompany(company)}
+              >
+                <MaterialIcons name="delete" size={20} color="#FF3B30" />
+              </TouchableOpacity>
+            </View>
           </View>
         ))}
       </ScrollView>
@@ -397,6 +393,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
     borderRadius: 12,
     padding: 12,
+    marginTop: 6,
     borderWidth: 2,
     borderColor: 'transparent',
   },
@@ -410,6 +407,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1a1a1a',
     marginBottom: 4,
+    paddingLeft: 6,
   },
   sectionHeader: {
     flexDirection: 'row',

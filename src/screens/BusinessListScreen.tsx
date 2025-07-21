@@ -143,7 +143,7 @@ export const BusinessListScreen: React.FC = () => {
 
   // Filter businesses based on selected company
   useEffect(() => {
-    setFilteredBusinesses(businesses);
+      setFilteredBusinesses(businesses);
     console.log('Businesses loaded:', businesses.length);
   }, [businesses]);
 
