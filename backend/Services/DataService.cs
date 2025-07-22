@@ -87,6 +87,7 @@ namespace CanvassingBackend.Services
                     Latitude = 37.7749,
                     Longitude = -122.4194,
                     CompanyId = "sample-company-1",
+                    AssignedUserId = "user-1",
                     Status = "pending",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -103,6 +104,7 @@ namespace CanvassingBackend.Services
                     Latitude = 37.8044,
                     Longitude = -122.2711,
                     CompanyId = "sample-company-1",
+                    AssignedUserId = "user-1",
                     Status = "contacted",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -119,6 +121,7 @@ namespace CanvassingBackend.Services
                     Latitude = 37.6879,
                     Longitude = -122.4702,
                     CompanyId = "sample-company-1",
+                    AssignedUserId = "manager-user-1",
                     Status = "completed",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -137,6 +140,7 @@ namespace CanvassingBackend.Services
                     Latitude = 37.8715,
                     Longitude = -122.2730,
                     CompanyId = "retail-chain-1",
+                    AssignedUserId = "user-2",
                     Status = "contacted",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -153,6 +157,7 @@ namespace CanvassingBackend.Services
                     Latitude = 37.4419,
                     Longitude = -122.1430,
                     CompanyId = "retail-chain-1",
+                    AssignedUserId = "user-2",
                     Status = "pending",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -169,6 +174,7 @@ namespace CanvassingBackend.Services
                     Latitude = 37.3382,
                     Longitude = -121.8863,
                     CompanyId = "retail-chain-1",
+                    AssignedUserId = "user-2",
                     Status = "completed",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -187,6 +193,7 @@ namespace CanvassingBackend.Services
                     Latitude = 37.6391,
                     Longitude = -122.4000,
                     CompanyId = "restaurant-group-1",
+                    AssignedUserId = "user-3",
                     Status = "contacted",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -203,6 +210,7 @@ namespace CanvassingBackend.Services
                     Latitude = 37.7749,
                     Longitude = -122.5107,
                     CompanyId = "restaurant-group-1",
+                    AssignedUserId = "user-3",
                     Status = "not-interested",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -219,6 +227,7 @@ namespace CanvassingBackend.Services
                     Latitude = 37.7577,
                     Longitude = -122.4376,
                     CompanyId = "restaurant-group-1",
+                    AssignedUserId = "user-3",
                     Status = "pending",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -237,6 +246,7 @@ namespace CanvassingBackend.Services
                     Latitude = 37.8000,
                     Longitude = -122.4376,
                     CompanyId = "tech-startups-1",
+                    AssignedUserId = null,
                     Status = "contacted",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -253,6 +263,7 @@ namespace CanvassingBackend.Services
                     Latitude = 37.7849,
                     Longitude = -122.4194,
                     CompanyId = "tech-startups-1",
+                    AssignedUserId = null,
                     Status = "completed",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -269,6 +280,7 @@ namespace CanvassingBackend.Services
                     Latitude = 37.7649,
                     Longitude = -122.4294,
                     CompanyId = "tech-startups-1",
+                    AssignedUserId = null,
                     Status = "pending",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -287,6 +299,7 @@ namespace CanvassingBackend.Services
                     Latitude = 37.7649,
                     Longitude = -122.4094,
                     CompanyId = "healthcare-providers-1",
+                    AssignedUserId = null,
                     Status = "contacted",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -303,6 +316,7 @@ namespace CanvassingBackend.Services
                     Latitude = 37.7849,
                     Longitude = -122.4394,
                     CompanyId = "healthcare-providers-1",
+                    AssignedUserId = null,
                     Status = "completed",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -319,6 +333,7 @@ namespace CanvassingBackend.Services
                     Latitude = 37.7749,
                     Longitude = -122.3994,
                     CompanyId = "healthcare-providers-1",
+                    AssignedUserId = null,
                     Status = "not-interested",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -411,10 +426,10 @@ namespace CanvassingBackend.Services
                 new User
                 {
                     Id = "4a672c97-8b1f-409a-8158-3dddd4a8f63f",
-                    Email = "craftycoolgamer@gmail.com",
+                    Email = "crafty@gmail.com",
                     Username = "crafty",
                     FirstName = "Quinn",
-                    LastName = "Prisbrey",
+                    LastName = "Pris",
                     PasswordHash = "cPVmKogQy1JuibMKilRj8FF2ynWVOWf4MHqKV0jnQ3k=",
                     Role = "Admin",
                     CompanyId = null,
@@ -479,6 +494,12 @@ namespace CanvassingBackend.Services
 
         public List<Business> GetBusinessesByCompanyId(string companyId) => 
             _businesses.Values.Where(b => b.CompanyId == companyId).ToList();
+
+        public List<Business> GetBusinessesByAssignedUserId(string userId) =>
+            _businesses.Values.Where(b => b.AssignedUserId == userId).ToList();
+
+        public List<Business> GetBusinessesByCompanyIdAndAssignedUserId(string companyId, string userId) =>
+            _businesses.Values.Where(b => b.CompanyId == companyId && b.AssignedUserId == userId).ToList();
 
         public Business? GetBusinessById(string id) => _businesses.TryGetValue(id, out var business) ? business : null;
 

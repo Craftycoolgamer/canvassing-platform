@@ -125,6 +125,16 @@ export class StorageService {
     }
   }
 
+  static async getBusinessesByAssignedUser(userId: string): Promise<Business[]> {
+    try {
+      const businesses = await this.getBusinesses();
+      return businesses.filter(b => b.assignedUserId === userId);
+    } catch (error) {
+      console.error('Error getting businesses by assigned user:', error);
+      return [];
+    }
+  }
+
   static async deleteBusiness(id: string): Promise<void> {
     try {
       const businesses = await this.getBusinesses();

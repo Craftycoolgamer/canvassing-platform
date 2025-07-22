@@ -151,6 +151,28 @@ class ApiService {
       method: 'DELETE',
     });
   }
+
+  // Business assignment endpoints
+  async getBusinessesByAssignedUser(userId: string): Promise<ApiResponse<Business[]>> {
+    return this.request<Business[]>(`/businesses/assigned/${userId}`);
+  }
+
+  async getBusinessesByCompanyAndAssignedUser(companyId: string, userId: string): Promise<ApiResponse<Business[]>> {
+    return this.request<Business[]>(`/businesses/company/${companyId}/assigned/${userId}`);
+  }
+
+  async assignBusinessToUser(businessId: string, userId: string): Promise<ApiResponse<Business>> {
+    return this.request<Business>(`/businesses/${businessId}/assign`, {
+      method: 'PUT',
+      body: JSON.stringify({ userId }),
+    });
+  }
+
+  async unassignBusinessFromUser(businessId: string): Promise<ApiResponse<Business>> {
+    return this.request<Business>(`/businesses/${businessId}/unassign`, {
+      method: 'PUT',
+    });
+  }
 }
 
 export const apiService = new ApiService(); 

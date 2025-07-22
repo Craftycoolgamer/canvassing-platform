@@ -12,7 +12,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
-import { Business, Company } from '../types';
+import { Business, Company, User } from '../types';
 import { StorageService } from '../services/storage';
 import { apiService } from '../services/api';
 import { getStatusColor, getStatusText, formatDate } from '../utils';
@@ -21,6 +21,7 @@ import { Map } from '../components/Map';
 import { BusinessList } from '../components/BusinessList';
 import { useAuth } from '../contexts/AuthContext';
 import { BusinessStatusNotesModal } from '../components/BusinessStatusNotesModal';
+import { BusinessAssignmentModal } from '../components/BusinessAssignmentModal';
 
 export const MapScreen: React.FC = () => {
   const [businesses, setBusinesses] = useState<Business[]>([]);
@@ -37,6 +38,9 @@ export const MapScreen: React.FC = () => {
   const mapRef = useRef<any>(null);
   const { user: currentUser } = useAuth();
   const [showStatusNotesModal, setShowStatusNotesModal] = useState(false);
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [assignmentBusiness, setAssignmentBusiness] = useState<Business | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
 
   // Check if user can manage pins
   const canManagePins = currentUser?.canManagePins || false;
@@ -72,34 +76,56 @@ export const MapScreen: React.FC = () => {
 
       setCompanies(companiesData);
 
-      // Load selected company to determine which businesses to fetch
-      const selectedCompanyId = await AsyncStorage.getItem('selectedCompanyId');
-      
+      // Load users for business assignment
+      const usersResponse = await apiService.getUsers();
+      if (usersResponse.success && usersResponse.data) {
+        setUsers(usersResponse.data);
+        console.log('Loaded users from API:', usersResponse.data.length);
+      }
+
       let businessesData: Business[] = [];
       
-      if (selectedCompanyId) {
-        // Load businesses for the selected company
-        console.log('Loading businesses for selected company:', selectedCompanyId);
-        const businessesResponse = await apiService.getBusinessesByCompany(selectedCompanyId);
+      // Check if user can manage pins
+      if (!canManagePins && currentUser) {
+        // User cannot manage pins - load only assigned businesses
+        console.log('User cannot manage pins, loading assigned businesses for user:', currentUser.id);
+        const businessesResponse = await apiService.getBusinessesByAssignedUser(currentUser.id);
         
         if (businessesResponse.success && businessesResponse.data) {
           businessesData = businessesResponse.data;
-          console.log('Loaded businesses for company from API:', businessesData.length);
+          console.log('Loaded assigned businesses from API:', businessesData.length);
         } else {
           console.log('API failed, loading from local storage');
-          businessesData = await StorageService.getBusinessesByCompany(selectedCompanyId);
+          businessesData = await StorageService.getBusinessesByAssignedUser(currentUser.id);
         }
       } else {
-        // Load all businesses if no company is selected
-        console.log('No company selected, loading all businesses');
-        const businessesResponse = await apiService.getBusinesses();
+        // User can manage pins - load based on company selection
+        const selectedCompanyId = await AsyncStorage.getItem('selectedCompanyId');
         
-        if (businessesResponse.success && businessesResponse.data) {
-          businessesData = businessesResponse.data;
-          console.log('Loaded all businesses from API:', businessesData.length);
+        if (selectedCompanyId) {
+          // Load businesses for the selected company
+          console.log('Loading businesses for selected company:', selectedCompanyId);
+          const businessesResponse = await apiService.getBusinessesByCompany(selectedCompanyId);
+          
+          if (businessesResponse.success && businessesResponse.data) {
+            businessesData = businessesResponse.data;
+            console.log('Loaded businesses for company from API:', businessesData.length);
+          } else {
+            console.log('API failed, loading from local storage');
+            businessesData = await StorageService.getBusinessesByCompany(selectedCompanyId);
+          }
         } else {
-          console.log('API failed, loading from local storage');
-          businessesData = await StorageService.getBusinesses();
+          // Load all businesses if no company is selected
+          console.log('No company selected, loading all businesses');
+          const businessesResponse = await apiService.getBusinesses();
+          
+          if (businessesResponse.success && businessesResponse.data) {
+            businessesData = businessesResponse.data;
+            console.log('Loaded all businesses from API:', businessesData.length);
+          } else {
+            console.log('API failed, loading from local storage');
+            businessesData = await StorageService.getBusinesses();
+          }
         }
       }
 
@@ -345,6 +371,15 @@ export const MapScreen: React.FC = () => {
     }
   };
 
+  const handleBusinessAssignment = (business: Business) => {
+    setAssignmentBusiness(business);
+    setShowAssignmentModal(true);
+  };
+
+  const handleAssignmentChange = () => {
+    loadData(); // Refresh the data after assignment change
+  };
+
   const getCompanyForBusiness = (business: Business): Company | undefined => {
     return companies.find(company => company.id === business.companyId);
   };
@@ -483,6 +518,18 @@ export const MapScreen: React.FC = () => {
                   </TouchableOpacity>
                 )}
 
+                {(currentUser?.role === 'Admin' || currentUser?.role === 'Manager') && (
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => handleBusinessAssignment(selectedBusiness)}
+                  >
+                    <MaterialIcons name="person-add" size={20} color="#34C759" />
+                    <Text style={styles.actionButtonText}>
+                      {selectedBusiness.assignedUserId ? 'Reassign' : 'Assign'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
                 {canManagePins && (
                   <TouchableOpacity
                     style={[styles.actionButton, styles.deleteButton]}
@@ -516,6 +563,18 @@ export const MapScreen: React.FC = () => {
           companies={companies}
           onClose={() => { setShowStatusNotesModal(false); setSelectedBusiness(null); }}
           onSave={handleStatusNotesSave}
+        />
+      )}
+
+      {/* Business Assignment Modal */}
+      {assignmentBusiness && (
+        <BusinessAssignmentModal
+          visible={showAssignmentModal}
+          business={assignmentBusiness}
+          users={users}
+          companies={companies}
+          onClose={() => { setShowAssignmentModal(false); setAssignmentBusiness(null); }}
+          onAssignmentChange={handleAssignmentChange}
         />
       )}
 

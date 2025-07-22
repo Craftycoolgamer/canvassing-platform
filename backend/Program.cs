@@ -229,14 +229,58 @@ namespace CanvassingBackend
             }).RequireAuthorization();
 
             // Businesses endpoints (require authentication)
-            app.MapGet("/api/businesses", (DataService dataService) =>
+            app.MapGet("/api/businesses", (DataService dataService, HttpContext context) =>
             {
+                var userEmail = context.User?.FindFirst("email")?.Value;
+                if (!string.IsNullOrEmpty(userEmail))
+                {
+                    var user = dataService.GetUserByEmail(userEmail);
+                    if (user != null)
+                    {
+                        // If user cannot manage pins, only show assigned businesses
+                        if (!user.CanManagePins)
+                        {
+                            var assignedBusinesses = dataService.GetBusinessesByAssignedUserId(user.Id);
+                            return Results.Ok(ApiResponse<List<Business>>.SuccessResponse(assignedBusinesses));
+                        }
+                        
+                        // If user is not admin, filter by company
+                        if (user.Role != "Admin" && !string.IsNullOrEmpty(user.CompanyId))
+                        {
+                            var companyBusinesses = dataService.GetBusinessesByCompanyId(user.CompanyId);
+                            return Results.Ok(ApiResponse<List<Business>>.SuccessResponse(companyBusinesses));
+                        }
+                    }
+                }
+
+                // Default: return all businesses (for admins or when no user context)
                 var businesses = dataService.GetAllBusinesses();
                 return Results.Ok(ApiResponse<List<Business>>.SuccessResponse(businesses));
             }).RequireAuthorization();
 
-            app.MapGet("/api/businesses/company/{companyId}", (string companyId, DataService dataService) =>
+            app.MapGet("/api/businesses/company/{companyId}", (string companyId, DataService dataService, HttpContext context) =>
             {
+                var userEmail = context.User?.FindFirst("email")?.Value;
+                if (!string.IsNullOrEmpty(userEmail))
+                {
+                    var user = dataService.GetUserByEmail(userEmail);
+                    if (user != null)
+                    {
+                        // If user cannot manage pins, only show assigned businesses within the company
+                        if (!user.CanManagePins)
+                        {
+                            var assignedBusinesses = dataService.GetBusinessesByCompanyIdAndAssignedUserId(companyId, user.Id);
+                            return Results.Ok(ApiResponse<List<Business>>.SuccessResponse(assignedBusinesses));
+                        }
+                        
+                        // If user is not admin, check if they belong to this company
+                        if (user.Role != "Admin" && user.CompanyId != companyId)
+                        {
+                            return Results.Forbid();
+                        }
+                    }
+                }
+
                 var businesses = dataService.GetBusinessesByCompanyId(companyId);
                 return Results.Ok(ApiResponse<List<Business>>.SuccessResponse(businesses));
             }).RequireAuthorization();
@@ -310,6 +354,88 @@ namespace CanvassingBackend
                     return Results.NotFound(ApiResponse<object>.ErrorResponse("Business not found"));
 
                 return Results.Ok(ApiResponse<object>.SuccessResponse((object?)null));
+            }).RequireAuthorization();
+
+            // Business assignment endpoints
+            app.MapGet("/api/businesses/assigned/{userId}", (string userId, DataService dataService) =>
+            {
+                var businesses = dataService.GetBusinessesByAssignedUserId(userId);
+                return Results.Ok(ApiResponse<List<Business>>.SuccessResponse(businesses));
+            }).RequireAuthorization();
+
+            app.MapGet("/api/businesses/company/{companyId}/assigned/{userId}", (string companyId, string userId, DataService dataService) =>
+            {
+                var businesses = dataService.GetBusinessesByCompanyIdAndAssignedUserId(companyId, userId);
+                return Results.Ok(ApiResponse<List<Business>>.SuccessResponse(businesses));
+            }).RequireAuthorization();
+
+            app.MapPut("/api/businesses/{id}/assign", (string id, string userId, DataService dataService, HttpContext context) =>
+            {
+                // Check if business exists
+                var business = dataService.GetBusinessById(id);
+                if (business == null)
+                    return Results.NotFound(ApiResponse<Business>.ErrorResponse("Business not found"));
+
+                // Check if user exists
+                var user = dataService.GetUserById(userId);
+                if (user == null)
+                    return Results.NotFound(ApiResponse<Business>.ErrorResponse("User not found"));
+
+                // Check permissions - only managers and admins can assign businesses
+                var currentUserEmail = context.User?.FindFirst("email")?.Value;
+                if (!string.IsNullOrEmpty(currentUserEmail))
+                {
+                    var currentUser = dataService.GetUserByEmail(currentUserEmail);
+                    if (currentUser != null && currentUser.Role == "User")
+                    {
+                        return Results.Forbid();
+                    }
+
+                    // Managers can only assign businesses within their company
+                    if (currentUser != null && currentUser.Role == "Manager" && currentUser.CompanyId != business.CompanyId)
+                    {
+                        return Results.Forbid();
+                    }
+                }
+
+                // Update the business assignment
+                business.AssignedUserId = userId;
+                business.UpdatedAt = DateTime.UtcNow;
+
+                var updatedBusiness = dataService.UpdateBusiness(id, business);
+                return Results.Ok(ApiResponse<Business>.SuccessResponse(updatedBusiness));
+            }).RequireAuthorization();
+
+            app.MapPut("/api/businesses/{id}/unassign", (string id, DataService dataService, HttpContext context) =>
+            {
+                // Check if business exists
+                var business = dataService.GetBusinessById(id);
+                if (business == null)
+                    return Results.NotFound(ApiResponse<Business>.ErrorResponse("Business not found"));
+
+                // Check permissions - only managers and admins can unassign businesses
+                var currentUserEmail = context.User?.FindFirst("email")?.Value;
+                if (!string.IsNullOrEmpty(currentUserEmail))
+                {
+                    var currentUser = dataService.GetUserByEmail(currentUserEmail);
+                    if (currentUser != null && currentUser.Role == "User")
+                    {
+                        return Results.Forbid();
+                    }
+
+                    // Managers can only unassign businesses within their company
+                    if (currentUser != null && currentUser.Role == "Manager" && currentUser.CompanyId != business.CompanyId)
+                    {
+                        return Results.Forbid();
+                    }
+                }
+
+                // Remove the business assignment
+                business.AssignedUserId = null;
+                business.UpdatedAt = DateTime.UtcNow;
+
+                var updatedBusiness = dataService.UpdateBusiness(id, business);
+                return Results.Ok(ApiResponse<Business>.SuccessResponse(updatedBusiness));
             }).RequireAuthorization();
 
             // Start the server

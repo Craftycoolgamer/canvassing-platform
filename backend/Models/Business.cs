@@ -23,6 +23,8 @@ namespace CanvassingBackend.Models
         [Required]
         public string CompanyId { get; set; } = string.Empty;
         
+        public string? AssignedUserId { get; set; } // User assigned to this business
+        
         public string Status { get; set; } = "pending";
         public DateTime? LastContactDate { get; set; }
         

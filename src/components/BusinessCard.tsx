@@ -8,12 +8,16 @@ interface BusinessCardProps {
   business: Business;
   company: Company;
   onPress: () => void;
+  onAssign?: () => void;
+  showAssignButton?: boolean;
 }
 
 export const BusinessCard: React.FC<BusinessCardProps> = ({
   business,
   company,
   onPress,
+  onAssign,
+  showAssignButton = false,
 }) => {
   return (
     <TouchableOpacity style={styles.container} onPress={onPress}>
@@ -74,14 +78,33 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.dateText}>
-          Added: {formatDate(business.createdAt)}
-        </Text>
-        {business.lastContactDate && (
-          <Text style={styles.dateText}>
-            Last Contact: {formatDate(business.lastContactDate)}
-          </Text>
-        )}
+        <View style={styles.footerContent}>
+          <View style={styles.dateInfo}>
+            <Text style={styles.dateText}>
+              Added: {formatDate(business.createdAt)}
+            </Text>
+            {business.lastContactDate && (
+              <Text style={styles.dateText}>
+                Last Contact: {formatDate(business.lastContactDate)}
+              </Text>
+            )}
+          </View>
+          
+          {showAssignButton && onAssign && (
+            <TouchableOpacity
+              style={styles.assignButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                onAssign();
+              }}
+            >
+              <MaterialIcons name="person-add" size={16} color="#007AFF" />
+              <Text style={styles.assignButtonText}>
+                {business.assignedUserId ? 'Reassign' : 'Assign'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -163,9 +186,33 @@ const styles = StyleSheet.create({
     borderTopColor: '#f0f0f0',
     paddingTop: 8,
   },
+  footerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  dateInfo: {
+    flex: 1,
+  },
   dateText: {
     fontSize: 12,
     color: '#999',
     marginBottom: 2,
+  },
+  assignButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    backgroundColor: 'transparent',
+  },
+  assignButtonText: {
+    fontSize: 12,
+    color: '#007AFF',
+    marginLeft: 4,
+    fontWeight: '500',
   },
 }); 

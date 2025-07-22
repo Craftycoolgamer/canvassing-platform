@@ -18,6 +18,7 @@ export interface Business {
   latitude: number;
   longitude: number;
   companyId: string;
+  assignedUserId?: string;
   status: 'pending' | 'contacted' | 'completed' | 'not-interested';
   lastContactDate?: string;
   createdAt: string;
