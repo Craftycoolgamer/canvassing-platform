@@ -342,10 +342,11 @@ namespace CanvassingBackend.Services
                     LastName = "User",
                     PasswordHash = "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk=", // "admin123"
                     Role = "Admin",
+                    CompanyId = null,
                     CanManagePins = true,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    UpdatedAt = DateTime.UtcNow,
                 },
                 new User
                 {
@@ -357,6 +358,7 @@ namespace CanvassingBackend.Services
                     PasswordHash = "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk=", // "admin123"
                     Role = "Manager",
                     CompanyId = "sample-company-1",
+                    CanManagePins = true,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -371,6 +373,7 @@ namespace CanvassingBackend.Services
                     PasswordHash = "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk=", // "admin123"
                     Role = "User",
                     CompanyId = "sample-company-1",
+                    CanManagePins = false,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -385,6 +388,7 @@ namespace CanvassingBackend.Services
                     PasswordHash = "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk=", // "admin123"
                     Role = "User",
                     CompanyId = "retail-chain-1",
+                    CanManagePins = false,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -399,6 +403,7 @@ namespace CanvassingBackend.Services
                     PasswordHash = "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk=", // "admin123"
                     Role = "User",
                     CompanyId = "restaurant-group-1",
+                    CanManagePins = false,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -413,8 +418,8 @@ namespace CanvassingBackend.Services
                     PasswordHash = "cPVmKogQy1JuibMKilRj8FF2ynWVOWf4MHqKV0jnQ3k=",
                     Role = "Admin",
                     CompanyId = null,
-                    IsActive = true,
                     CanManagePins = true,
+                    IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
                 }
@@ -514,6 +519,8 @@ namespace CanvassingBackend.Services
         public User? GetUserById(string id) => _users.TryGetValue(id, out var user) ? user : null;
 
         public User? GetUserByEmail(string email) => _users.Values.FirstOrDefault(u => u.Email == email);
+        
+        public User? GetUserByUsername(string username) => _users.Values.FirstOrDefault(u => u.Username == username);
 
         public User CreateUser(User user)
         {

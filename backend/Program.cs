@@ -124,16 +124,41 @@ namespace CanvassingBackend
                 return Results.Ok(ApiResponse<User>.SuccessResponse(user));
             }).RequireAuthorization();
 
-            app.MapPost("/api/users", (User user, DataService dataService) =>
+            app.MapPost("/api/users", (UserCreateRequest request, DataService dataService) =>
             {
-                if (string.IsNullOrEmpty(user.Email) || string.IsNullOrEmpty(user.Username) || 
-                    string.IsNullOrEmpty(user.FirstName) || string.IsNullOrEmpty(user.LastName))
+                if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Username) || 
+                    string.IsNullOrEmpty(request.FirstName) || string.IsNullOrEmpty(request.LastName))
                     return Results.BadRequest(ApiResponse<User>.ErrorResponse("Email, Username, FirstName, and LastName are required"));
 
                 // Check if user with email already exists
-                var existingUser = dataService.GetUserByEmail(user.Email);
+                var existingUser = dataService.GetUserByEmail(request.Email);
                 if (existingUser != null)
                     return Results.BadRequest(ApiResponse<User>.ErrorResponse("User with this email already exists"));
+
+                // Hash the password if it's provided
+                string passwordHash = string.Empty;
+                if (!string.IsNullOrEmpty(request.Password))
+                {
+                    using var sha256 = System.Security.Cryptography.SHA256.Create();
+                    var hashedBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(request.Password));
+                    passwordHash = Convert.ToBase64String(hashedBytes);
+                }
+
+                var user = new User
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Email = request.Email,
+                    Username = request.Username,
+                    FirstName = request.FirstName,
+                    LastName = request.LastName,
+                    PasswordHash = passwordHash,
+                    Role = request.Role,
+                    CompanyId = request.CompanyId,
+                    IsActive = request.IsActive,
+                    CanManagePins = request.CanManagePins,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
 
                 var createdUser = dataService.CreateUser(user);
                 return Results.Created($"/api/users/{createdUser.Id}", ApiResponse<User>.SuccessResponse(createdUser));
@@ -225,7 +250,7 @@ namespace CanvassingBackend
                 return Results.Ok(ApiResponse<Business>.SuccessResponse(business));
             }).RequireAuthorization();
 
-            app.MapPost("/api/businesses", (Business business, DataService dataService) =>
+            app.MapPost("/api/businesses", (Business business, DataService dataService, HttpContext context) =>
             {
                 if (string.IsNullOrEmpty(business.Name) || string.IsNullOrEmpty(business.Address) || string.IsNullOrEmpty(business.CompanyId))
                     return Results.BadRequest(ApiResponse<Business>.ErrorResponse("Name, Address, and CompanyId are required"));
@@ -239,15 +264,37 @@ namespace CanvassingBackend
                 if (company == null)
                     return Results.BadRequest(ApiResponse<Business>.ErrorResponse("Company not found"));
 
+                // Check user permissions
+                var userEmail = context.User?.FindFirst("email")?.Value;
+                if (!string.IsNullOrEmpty(userEmail))
+                {
+                    var user = dataService.GetUserByEmail(userEmail);
+                    if (user != null && user.Role != "Admin" && user.CompanyId != business.CompanyId)
+                    {
+                        return Results.Forbid();
+                    }
+                }
+
                 var createdBusiness = dataService.CreateBusiness(business);
                 return Results.Created($"/api/businesses/{createdBusiness.Id}", ApiResponse<Business>.SuccessResponse(createdBusiness));
             }).RequireAuthorization();
 
-            app.MapPut("/api/businesses/{id}", (string id, Business business, DataService dataService) =>
+            app.MapPut("/api/businesses/{id}", (string id, Business business, DataService dataService, HttpContext context) =>
             {
                 // Ensure Notes is always a non-null array
                 if (business.Notes == null)
                     business.Notes = new List<string>();
+
+                // Check user permissions
+                var userEmail = context.User?.FindFirst("email")?.Value;
+                if (!string.IsNullOrEmpty(userEmail))
+                {
+                    var user = dataService.GetUserByEmail(userEmail);
+                    if (user != null && user.Role != "Admin" && user.CompanyId != business.CompanyId)
+                    {
+                        return Results.Forbid();
+                    }
+                }
 
                 var updatedBusiness = dataService.UpdateBusiness(id, business);
                 if (updatedBusiness == null)

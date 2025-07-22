@@ -73,12 +73,23 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
         }));
       }
       
+      // Set company based on user role
       if (companies.length > 0) {
-        console.log('Setting default company:', companies[0].id);
-        setFormData(prev => ({ ...prev, companyId: companies[0].id }));
+        if (currentUser?.role === 'Admin') {
+          // Admin can choose any company, default to first one
+          console.log('Setting default company for admin:', companies[0].id);
+          setFormData(prev => ({ ...prev, companyId: companies[0].id }));
+        } else {
+          // Non-admin users are restricted to their assigned company
+          const userCompany = companies.find(company => company.id === currentUser?.companyId);
+          if (userCompany) {
+            console.log('Setting user company:', userCompany.id);
+            setFormData(prev => ({ ...prev, companyId: userCompany.id }));
+          }
+        }
       }
     }
-  }, [business, companies, initialCoordinates]);
+  }, [business, companies, initialCoordinates, currentUser]);
 
   const validateForm = (): boolean => {
     const newErrors: Partial<BusinessFormData> = {};
@@ -234,26 +245,41 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Company *</Text>
-          <View style={[styles.pickerContainer, errors.companyId && styles.inputError]}>
-            {companies.map((company) => (
-              <TouchableOpacity
-                key={company.id}
-                style={[
-                  styles.companyOption,
-                  formData.companyId === company.id && styles.selectedCompany,
-                  !canManagePins && styles.disabledOption,
-                ]}
-                onPress={() => canManagePins && updateField('companyId', company.id)}
-                disabled={!canManagePins}
-              >
-                <View style={[styles.companyIcon, { backgroundColor: company.color }]}>
-                  <MaterialIcons name={company.pinIcon as any} size={16} color="white" />
+          <Text style={styles.label}>Company</Text>
+          {currentUser?.role === 'Admin' ? (
+            // Admin can see all companies with picker interface
+            <View style={[styles.pickerContainer, errors.companyId && styles.inputError]}>
+              {companies.map((company) => (
+                <TouchableOpacity
+                  key={company.id}
+                  style={[
+                    styles.companyOption,
+                    formData.companyId === company.id && styles.selectedCompany,
+                    !canManagePins && styles.disabledOption,
+                  ]}
+                  onPress={() => canManagePins && updateField('companyId', company.id)}
+                  disabled={!canManagePins}
+                >
+                  <View style={[styles.companyIcon, { backgroundColor: company.color }]}>
+                    <MaterialIcons name={company.pinIcon as any} size={16} color="white" />
+                  </View>
+                  <Text style={styles.companyName}>{company.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : (
+            // Non-admin users see just their company icon and name
+            companies
+              .filter(company => company.id === currentUser?.companyId)
+              .map((company) => (
+                <View key={company.id} style={styles.companyDisplay}>
+                  <View style={[styles.companyIcon, { backgroundColor: company.color }]}>
+                    <MaterialIcons name={company.pinIcon as any} size={20} color="white" />
+                  </View>
+                  <Text style={styles.companyDisplayText}>{company.name}</Text>
                 </View>
-                <Text style={styles.companyName}>{company.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+              ))
+          )}
           {errors.companyId && <Text style={styles.errorText}>{errors.companyId}</Text>}
         </View>
 
@@ -285,9 +311,9 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
         <View style={styles.field}>
           <Text style={styles.label}>Notes</Text>
           {formData.notes.map((note, idx) => (
-            <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, marginHorizontal: 16 }}>
               <TextInput
-                style={[styles.input, styles.textArea, { flex: 1 }, !canManagePins && styles.disabledInput]}
+                style={[styles.input, { flex: 1 }, !canManagePins && styles.disabledInput]}
                 value={note}
                 onChangeText={(value) => updateNote(idx, value)}
                 placeholder={`Note #${idx + 1}`}
@@ -424,6 +450,20 @@ const styles = StyleSheet.create({
   companyName: {
     fontSize: 16,
     color: '#1a1a1a',
+  },
+  companyDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+  },
+  companyDisplayText: {
+    fontSize: 16,
+    color: '#1a1a1a',
+    fontWeight: '500',
   },
   statusContainer: {
     flexDirection: 'row',

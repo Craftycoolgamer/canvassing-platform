@@ -18,7 +18,14 @@ namespace CanvassingBackend.Services
 
         public AuthResponse? Login(LoginRequest request)
         {
+            // Try to find user by email first, then by username
             var user = _dataService.GetUserByEmail(request.Email);
+            if (user == null)
+            {
+                // If not found by email, try by username
+                user = _dataService.GetUserByUsername(request.Email);
+            }
+            
             if (user == null || !VerifyPassword(request.Password, user.PasswordHash))
                 return null;
 
@@ -49,6 +56,7 @@ namespace CanvassingBackend.Services
                 Role = "User", // Default role
                 CompanyId = request.CompanyId,
                 IsActive = true,
+                CanManagePins = false, // Default to false for new users
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };

@@ -5,7 +5,10 @@ A modern React Native application for managing canvassing operations with map vi
 ## Features
 
 - **JWT Authentication**: Secure login/register system with proper JWT tokens
-- **Role-Based Authorization**: Admin, Manager, and User permission levels
+- **Role-Based Authorization**: Admin, Manager, and User permission levels with granular access control
+- **User Management**: Complete user lifecycle management with role assignment and company assignment
+- **Pin Management Permissions**: Fine-grained control over who can add/edit/delete business pins
+- **Company-Based Access Control**: Users restricted to their assigned company unless admin
 - **Map View**: Interactive map with business pins and clustering
 - **Business List**: Searchable and filterable list of businesses
 - **Settings**: User management, company selection, and logout
@@ -17,11 +20,10 @@ A modern React Native application for managing canvassing operations with map vi
 - **Advanced Analytics**: Role-based analytics and reporting
 - **Token Management**: Secure JWT tokens with automatic refresh
 
-
 ## Screens
 
 ### 1. Authentication Screens
-- **Login Screen**: Email/password authentication with JWT validation
+- **Login Screen**: Username/email and password authentication with JWT validation
 - **Register Screen**: Complete user registration with form validation
 - **Demo Accounts**: Pre-configured test accounts for different roles
 
@@ -29,28 +31,33 @@ A modern React Native application for managing canvassing operations with map vi
 - Interactive map with business pins
 - Pin clustering for better visualization
 - Tap pins to view business details
-- Edit and delete businesses directly from map
+- Edit and delete businesses directly from map (with permissions)
 - User location tracking
 - Company-based business filtering
 - Role-based access control
+- Restricted business editing based on pin management permissions
 
 ### 3. Business List Screen
 - Card-based business display
 - Search functionality
 - Status filtering (Pending, Contacted, Completed, Not Interested)
-- Add new businesses with floating action button
-- Edit businesses by tapping cards
+- Add new businesses with floating action button (with permissions)
+- Edit businesses by tapping cards (with permissions)
 - Company-based business filtering
 - Role-based permissions
+- Restricted editing based on pin management permissions
 
 ### 4. Settings Screen
 - User information display (name, email, role)
 - Company management and selection
+- User management (Admin and Manager only)
+- Manager management (Admin only)
 - Custom pin icons and colors
 - Add, edit, and delete companies
 - Visual icon and color picker
 - Secure logout functionality
 - Role-based company access
+- Pin management permission toggles
 
 ### 5. Analytics Screen (Manager/Admin Only)
 - Advanced analytics and reporting
@@ -64,10 +71,12 @@ A modern React Native application for managing canvassing operations with map vi
 
 ### Admin Role
 - **Full Access**: Can manage all companies and businesses
-- **User Management**: Can view and manage all users
+- **User Management**: Can view and manage all users and managers
 - **System Settings**: Complete administrative control
 - **Analytics**: Full analytics access across all companies
 - **Data Operations**: Create, read, update, delete any data
+- **Pin Management**: Can manage all business pins
+- **Company Assignment**: Can assign users to any company
 
 ### Manager Role
 - **Company Access**: Limited to assigned company data
@@ -75,12 +84,16 @@ A modern React Native application for managing canvassing operations with map vi
 - **Team Coordination**: Oversee company-specific operations
 - **Analytics**: Company-specific analytics and reporting
 - **Limited Permissions**: Cannot access other companies' data
+- **Pin Management**: Can manage pins if permission granted
+- **User Management**: Cannot manage users
 
 ### User Role
 - **Basic Access**: View and update assigned company data
-- **Business Operations**: Read/write access to company businesses
+- **Business Operations**: Read/write access to company businesses (with pin permissions)
 - **Limited Scope**: Cannot manage users or system settings
 - **Data Access**: Restricted to company-specific information
+- **Pin Management**: Can manage pins if permission granted
+- **Status/Notes Only**: Can modify business status and notes even without pin permissions
 
 ## Tech Stack
 
@@ -209,6 +222,7 @@ The authentication system uses:
 - **Refresh Tokens**: Automatic token refresh mechanism
 - **Role-Based Access**: Permission levels for different user types
 - **Session Management**: Automatic logout on token expiration
+- **Username/Email Login**: Users can login with either username or email
 
 ### Map Configuration
 
@@ -226,17 +240,17 @@ The app uses OpenStreetMap via WebView, which doesn't require API keys. For prod
 The system comes with pre-configured demo accounts:
 
 - **Admin Account**:
-  - Email: `admin@canvassing.com`
+  - Email: `admin@canvassing.com` or Username: `admin`
   - Password: `admin123`
   - Role: Full system access
 
 - **Manager Account**:
-  - Email: `manager@canvassing.com`
+  - Email: `manager@canvassing.com` or Username: `manager`
   - Password: `admin123`
   - Role: Company-specific access
 
 - **User Account**:
-  - Email: `user@canvassing.com`
+  - Email: `user@canvassing.com` or Username: `user`
   - Password: `admin123`
   - Role: Basic user access
 
@@ -248,7 +262,7 @@ The system comes with pre-configured demo accounts:
 5. You'll be automatically logged in with JWT tokens
 
 #### Login
-1. Enter your email and password
+1. Enter your email/username and password
 2. Tap "Sign In"
 3. The app will validate credentials and receive JWT tokens
 4. Tokens are stored securely in AsyncStorage
@@ -259,6 +273,15 @@ The system comes with pre-configured demo accounts:
 3. Confirm the logout action
 4. JWT tokens are revoked and cleared
 5. You'll be returned to the login screen
+
+### User Management (Admin Only)
+
+1. Go to Settings tab
+2. Access "User Menu" or "Manager Menu"
+3. Add new users with role assignment
+4. Assign users to companies
+5. Set pin management permissions
+6. Edit or delete existing users
 
 ### Adding Companies
 
@@ -278,12 +301,12 @@ The system comes with pre-configured demo accounts:
 ### Adding Businesses
 
 1. Go to the Business List or Map tab
-2. Tap the "+" button
+2. Tap the "+" button or tap the map (if you have pin management permissions)
 3. Fill in business details:
    - Name (required)
    - Address (required)
    - Phone, email, website (optional)
-   - Select company
+   - Company (auto-assigned for non-admin users)
    - Choose status
    - Add notes
 4. Save the business
@@ -291,18 +314,20 @@ The system comes with pre-configured demo accounts:
 ### Managing Businesses
 
 - **View Details**: Tap on business cards or map pins
-- **Edit**: Tap the edit button in business details
-- **Delete**: Tap the delete button (with confirmation)
+- **Edit**: Tap the edit button in business details (with permissions)
+- **Delete**: Tap the delete button (with confirmation and permissions)
 - **Search**: Use the search bar in the business list
 - **Filter**: Use status filters to view specific businesses
+- **Status/Notes Only**: Users without pin permissions can still modify status and notes
 
 ### Map Features
 
 - **Pin Clustering**: Multiple pins in the same area are grouped
 - **Business Details**: Tap pins to view full business information
-- **Edit/Delete**: Manage businesses directly from the map
+- **Edit/Delete**: Manage businesses directly from the map (with permissions)
 - **User Location**: Shows your current position on the map
 - **Company Filtering**: Only shows businesses for the selected company
+- **Permission-Based Access**: Different actions available based on user permissions
 
 ### Analytics Features (Manager/Admin)
 
@@ -324,6 +349,7 @@ interface User {
   role: 'Admin' | 'Manager' | 'User';
   companyId?: string;
   isActive: boolean;
+  canManagePins: boolean;
   lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -351,7 +377,7 @@ interface Business {
   phone: string;
   email: string;
   website: string;
-  notes: string;
+  notes: string[];
   latitude: number;
   longitude: number;
   companyId: string;
@@ -371,8 +397,11 @@ interface Business {
 - `POST /api/auth/logout` - User logout and token revocation
 
 ### Protected Endpoints (Require JWT)
-- `GET /api/users` - Get all users (Admin only)
+- `GET /api/users` - Get all users
 - `GET /api/users/{id}` - Get specific user
+- `POST /api/users` - Create new user
+- `PUT /api/users/{id}` - Update user
+- `DELETE /api/users/{id}` - Delete user
 
 #### Companies
 - `GET /api/companies` - Get all companies
@@ -399,6 +428,13 @@ interface Business {
 canvassing-platform/
 ├── src/
 │   ├── components/      # Reusable components
+│   │   ├── BusinessForm.tsx
+│   │   ├── BusinessList.tsx
+│   │   ├── BusinessStatusNotesModal.tsx
+│   │   ├── CompanySelector.tsx
+│   │   ├── ManagerSelector.tsx
+│   │   ├── UserSelector.tsx
+│   │   └── Map.tsx
 │   ├── screens/         # Screen components
 │   ├── services/        # API and storage services
 │   ├── contexts/        # React contexts (Auth)
@@ -556,6 +592,12 @@ For issues and questions:
 - [x] JWT implementation
 - [x] Advanced analytics and reporting
 - [x] Centralized API configuration
+- [x] User management system
+- [x] Manager management system
+- [x] Pin management permissions
+- [x] Company-based access restrictions
+- [x] Username/email login
+- [x] Business status and notes modal
 - [ ] Database integration (SQL Server/PostgreSQL)
 - [ ] Real-time synchronization
 - [ ] Export functionality (CSV, PDF)

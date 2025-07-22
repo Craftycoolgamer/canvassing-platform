@@ -66,13 +66,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <MaterialIcons name="email" size={20} color="#666" style={styles.inputIcon} />
+            <MaterialIcons name="person" size={20} color="#666" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="Email"
+              placeholder="Email or Username"
               value={email}
               onChangeText={setEmail}
-              keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
             />
@@ -125,9 +124,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
         <View style={styles.demoInfo}>
           <Text style={styles.demoTitle}>Demo Accounts</Text>
-          <Text style={styles.demoText}>Admin: admin@canvassing.com</Text>
-          <Text style={styles.demoText}>Manager: manager@canvassing.com</Text>
-          <Text style={styles.demoText}>User: user@canvassing.com</Text>
+          <Text style={styles.demoText}>Admin: admin@canvassing.com or "admin"</Text>
+          <Text style={styles.demoText}>Manager: manager@canvassing.com or "manager"</Text>
+          <Text style={styles.demoText}>User: user@canvassing.com or "user"</Text>
           <Text style={styles.demoText}>Password: admin123</Text>
         </View>
       </ScrollView>

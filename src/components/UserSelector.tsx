@@ -31,6 +31,7 @@ export const UserSelector: React.FC<UserSelectorProps> = ({
   const [showFormModal, setShowFormModal] = useState(false);
   const [showCompanyPicker, setShowCompanyPicker] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState<UserFormData>({
     email: '',
     username: '',
@@ -203,6 +204,11 @@ export const UserSelector: React.FC<UserSelectorProps> = ({
     }
     if (!editingUser && !formData.password) {
       Alert.alert('Error', 'Password is required for new users');
+      return false;
+    }
+    // Require company for non-admin users
+    if (formData.role !== 'Admin' && !formData.companyId) {
+      Alert.alert('Error', 'Company is required for non-admin users');
       return false;
     }
     return true;
@@ -389,57 +395,83 @@ export const UserSelector: React.FC<UserSelectorProps> = ({
           <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
             <View style={styles.formField}>
               <Text style={styles.label}>First Name *</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.firstName}
-                onChangeText={(value) => updateField('firstName', value)}
-                placeholder="Enter first name"
-              />
+              <View style={styles.inputContainer}>
+                <MaterialIcons name="person" size={20} color="#666" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  value={formData.firstName}
+                  onChangeText={(value) => updateField('firstName', value)}
+                  placeholder="Enter first name"
+                />
+              </View>
             </View>
 
             <View style={styles.formField}>
               <Text style={styles.label}>Last Name *</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.lastName}
-                onChangeText={(value) => updateField('lastName', value)}
-                placeholder="Enter last name"
-              />
+              <View style={styles.inputContainer}>
+                <MaterialIcons name="person" size={20} color="#666" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  value={formData.lastName}
+                  onChangeText={(value) => updateField('lastName', value)}
+                  placeholder="Enter last name"
+                />
+              </View>
             </View>
 
             <View style={styles.formField}>
               <Text style={styles.label}>Email *</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.email}
-                onChangeText={(value) => updateField('email', value)}
-                placeholder="Enter email"
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
+              <View style={styles.inputContainer}>
+                <MaterialIcons name="email" size={20} color="#666" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  value={formData.email}
+                  onChangeText={(value) => updateField('email', value)}
+                  placeholder="Enter email"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
             </View>
 
             <View style={styles.formField}>
               <Text style={styles.label}>Username *</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.username}
-                onChangeText={(value) => updateField('username', value)}
-                placeholder="Enter username"
-                autoCapitalize="none"
-              />
+              <View style={styles.inputContainer}>
+                <MaterialIcons name="account-circle" size={20} color="#666" style={styles.inputIcon} /> 
+                <TextInput
+                  style={styles.input}
+                  value={formData.username}
+                  onChangeText={(value) => updateField('username', value)}
+                  placeholder="Enter username"
+                  autoCapitalize="none"
+                />
+              </View>
             </View>
 
             {!editingUser && (
               <View style={styles.formField}>
                 <Text style={styles.label}>Password *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={formData.password}
-                  onChangeText={(value) => updateField('password', value)}
-                  placeholder="Enter password"
-                  secureTextEntry
-                />
+                <View style={styles.inputContainer}>
+                  <MaterialIcons name="lock" size={20} color="#666" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Password"
+                    value={formData.password}
+                    onChangeText={(value) => updateField('password', value)}
+                    secureTextEntry={!showPassword}
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity
+                    style={styles.passwordToggle}
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    <MaterialIcons
+                      name={showPassword ? 'visibility' : 'visibility-off'}
+                      size={20}
+                      color="#666"
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
 
@@ -741,7 +773,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   formField: {
-    marginBottom: 20,
+    marginBottom: 5,
   },
   label: {
     fontSize: 16,
@@ -750,12 +782,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 12,
+    flex: 1,
+    height: 50,
     fontSize: 16,
-    backgroundColor: 'white',
+    color: '#1a1a1a',
   },
   roleGrid: {
     flexDirection: 'row',
@@ -862,7 +892,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 32,
+    marginTop: 8,
   },
   switch: {
     width: 50,
@@ -895,5 +926,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginTop: 4,
+  },
+  passwordToggle: {
+    padding: 8,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  inputIcon: {
+    marginRight: 12,
   },
 }); 
