@@ -1,10 +1,10 @@
 # Canvassing Platform
 
-A modern React Native application for managing canvassing operations with map visualization, business tracking, company management, and user authentication.
+A modern React Native application for managing canvassing operations with map visualization, business tracking, company management, and secure JWT authentication.
 
 ## Features
 
-- **User Authentication**: Secure login/register system with role-based access
+- **JWT Authentication**: Secure login/register system with proper JWT tokens
 - **Role-Based Authorization**: Admin, Manager, and User permission levels
 - **Map View**: Interactive map with business pins and clustering
 - **Business List**: Searchable and filterable list of businesses
@@ -14,12 +14,14 @@ A modern React Native application for managing canvassing operations with map vi
 - **Modern UI**: Clean, intuitive interface with Material Design
 - **Company Filtering**: Filter businesses by selected company
 - **Real-time Updates**: Automatic refresh when company selection changes
-- **Token Management**: Secure JWT-like token system with refresh capabilities
+- **Advanced Analytics**: Role-based analytics and reporting
+- **Token Management**: Secure JWT tokens with automatic refresh
+
 
 ## Screens
 
 ### 1. Authentication Screens
-- **Login Screen**: Email/password authentication with validation
+- **Login Screen**: Email/password authentication with JWT validation
 - **Register Screen**: Complete user registration with form validation
 - **Demo Accounts**: Pre-configured test accounts for different roles
 
@@ -50,18 +52,28 @@ A modern React Native application for managing canvassing operations with map vi
 - Secure logout functionality
 - Role-based company access
 
+### 5. Analytics Screen (Manager/Admin Only)
+- Advanced analytics and reporting
+- Business status breakdown
+- Company performance metrics
+- Recent activity tracking
+- Role-based data access
+- Interactive charts and graphs
+
 ## User Roles & Permissions
 
 ### Admin Role
 - **Full Access**: Can manage all companies and businesses
 - **User Management**: Can view and manage all users
 - **System Settings**: Complete administrative control
+- **Analytics**: Full analytics access across all companies
 - **Data Operations**: Create, read, update, delete any data
 
 ### Manager Role
 - **Company Access**: Limited to assigned company data
 - **Business Management**: Can manage businesses within their company
 - **Team Coordination**: Oversee company-specific operations
+- **Analytics**: Company-specific analytics and reporting
 - **Limited Permissions**: Cannot access other companies' data
 
 ### User Role
@@ -84,11 +96,12 @@ A modern React Native application for managing canvassing operations with map vi
 ### Backend
 - **.NET 8** with ASP.NET Core Minimal APIs
 - **C#** for server-side logic
+- **JWT Authentication** with proper token validation
 - **CORS** for cross-origin requests
 - **In-memory storage** using ConcurrentDictionary
 - **Newtonsoft.Json** for JSON serialization
 - **SHA256** password hashing
-- **Token-based authentication** with refresh tokens
+- **Role-based authorization** with JWT claims
 
 ## Installation
 
@@ -155,17 +168,43 @@ The backend will run on `http://localhost:3000`
 
 ### API Configuration
 
-Update the API base URL in `src/services/api.ts` and `src/services/authService.ts`:
+The API base URL is centralized in `src/config/api.ts`:
 
 ```typescript
-const API_BASE_URL = 'http://localhost:3000/api';
+export const API_CONFIG = {
+  BASE_URL: 'http://192.168.12.110:3000/api', // Change this to your backend URL
+  
+  // Alternative URLs for different environments
+  // LOCAL: 'http://localhost:3000/api',
+  // DOCKER: 'http://localhost:3000/api',
+  // PRODUCTION: 'https://your-production-domain.com/api',
+};
 ```
 
-For production, replace with your actual backend URL.
+*** Important**: Update the `BASE_URL` in `src/config/api.ts` to match your backend server's IP address.
+
+### JWT Configuration
+
+The JWT settings are configured in `backend/appsettings.json`:
+
+```json
+{
+  "Jwt": {
+    "SecretKey": "your-super-secret-key-with-at-least-32-characters",
+    "Issuer": "CanvassingAPI",
+    "Audience": "CanvassingApp",
+    "TokenExpirationHours": 24,
+    "RefreshTokenExpirationDays": 7
+  }
+}
+```
+
+*** Production Security**: Change the secret key for production use!
 
 ### Authentication Configuration
 
 The authentication system uses:
+- **JWT Tokens**: Secure, signed tokens for authentication
 - **Token Storage**: AsyncStorage for secure token persistence
 - **Refresh Tokens**: Automatic token refresh mechanism
 - **Role-Based Access**: Permission levels for different user types
@@ -206,18 +245,20 @@ The system comes with pre-configured demo accounts:
 2. Tap "Don't have an account? Sign up"
 3. Fill in all required fields
 4. Submit the registration form
-5. You'll be automatically logged in
+5. You'll be automatically logged in with JWT tokens
 
 #### Login
 1. Enter your email and password
 2. Tap "Sign In"
-3. The app will validate credentials and log you in
+3. The app will validate credentials and receive JWT tokens
+4. Tokens are stored securely in AsyncStorage
 
 #### Logout
 1. Go to the Settings tab
 2. Tap the "Logout" button
 3. Confirm the logout action
-4. You'll be returned to the login screen
+4. JWT tokens are revoked and cleared
+5. You'll be returned to the login screen
 
 ### Adding Companies
 
@@ -262,6 +303,13 @@ The system comes with pre-configured demo accounts:
 - **Edit/Delete**: Manage businesses directly from the map
 - **User Location**: Shows your current position on the map
 - **Company Filtering**: Only shows businesses for the selected company
+
+### Analytics Features (Manager/Admin)
+
+- **Overview Statistics**: Total businesses and status breakdown
+- **Company Performance**: Metrics by company (Admin only)
+- **Recent Activity**: Latest business updates with details
+- **Role-Based Access**: Different views based on user role
 
 ## Data Structure
 
@@ -316,24 +364,24 @@ interface Business {
 
 ## API Endpoints
 
-### Authentication
-- `POST /api/auth/login` - User login
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/refresh` - Refresh authentication token
-- `POST /api/auth/logout` - User logout
+### Authentication (Public)
+- `POST /api/auth/login` - User login with JWT token generation
+- `POST /api/auth/register` - User registration with JWT tokens
+- `POST /api/auth/refresh` - Refresh JWT access token
+- `POST /api/auth/logout` - User logout and token revocation
 
-### Users
+### Protected Endpoints (Require JWT)
 - `GET /api/users` - Get all users (Admin only)
 - `GET /api/users/{id}` - Get specific user
 
-### Companies
+#### Companies
 - `GET /api/companies` - Get all companies
 - `GET /api/companies/{id}` - Get specific company
 - `POST /api/companies` - Create new company
 - `PUT /api/companies/{id}` - Update company
 - `DELETE /api/companies/{id}` - Delete company
 
-### Businesses
+#### Businesses
 - `GET /api/businesses` - Get all businesses
 - `GET /api/businesses/company/{companyId}` - Get businesses by company ID
 - `GET /api/businesses/{id}` - Get specific business
@@ -341,7 +389,7 @@ interface Business {
 - `PUT /api/businesses/{id}` - Update business
 - `DELETE /api/businesses/{id}` - Delete business
 
-### Health Check
+### Health Check (Public)
 - `GET /api/health` - Check if the API is running
 
 ## Development
@@ -350,19 +398,23 @@ interface Business {
 ```
 canvassing-platform/
 ├── src/
-│   ├── components/     # Reusable components
-│   ├── screens/        # Screen components
-│   ├── services/       # API and storage services
-│   ├── contexts/       # React contexts (Auth)
-│   ├── types/          # TypeScript type definitions
-│   ├── utils/          # Utility functions
-│   └── navigation/     # Navigation configuration
-├── backend/            # .NET 8 API server
-│   ├── Models/         # C# model classes
-│   ├── Services/       # Business logic services
-│   └── Program.cs      # API endpoints
-├── assets/             # Static assets
-└── App.tsx            # Main app component
+│   ├── components/      # Reusable components
+│   ├── screens/         # Screen components
+│   ├── services/        # API and storage services
+│   ├── contexts/        # React contexts (Auth)
+│   ├── types/           # TypeScript type definitions
+│   ├── utils/           # Utility functions
+│   ├── navigation/      # Navigation configuration
+│   └── config/          # Configuration files
+│       └── api.ts       # Centralized API configuration
+├── backend/             # .NET 8 API server
+│   ├── Models/          # C# model classes
+│   ├── Services/        # Business logic services
+│   ├── Middleware/      # JWT middleware
+│   ├── appsettings.json # JWT configuration
+│   └── Program.cs       # API endpoints
+├── assets/              # Static assets
+└── App.tsx              # Main app component
 ```
 
 ### Adding New Features
@@ -373,12 +425,36 @@ canvassing-platform/
 4. **New Type**: Add to `src/types/index.ts`
 5. **Authentication**: Use `useAuth()` hook for auth state
 
-### Authentication Development
+### JWT Development
 
 1. **Add Protected Routes**: Use `useAuth()` to check authentication
 2. **Role-Based Access**: Check user role for feature access
-3. **API Authorization**: Include auth headers in API requests
+3. **API Authorization**: Include JWT auth headers in API requests
 4. **Token Management**: Use `AuthService` for token operations
+
+### API Configuration
+
+The API base URL is centralized in `src/config/api.ts`. To change the backend URL:
+
+1. **Update the configuration**:
+```typescript
+// src/config/api.ts
+export const API_CONFIG = {
+  BASE_URL: 'http://your-new-ip:3000/api',
+  // ... rest of config
+};
+```
+
+2. **Add environment-specific URLs**:
+```typescript
+// src/config/api.ts
+export const getApiBaseUrl = (): string => {
+  if (__DEV__) {
+    return 'http://192.168.1.34:3000/api'; // Development
+  }
+  return 'https://your-production-domain.com/api'; // Production
+};
+```
 
 ## Deployment
 
@@ -403,10 +479,20 @@ dotnet publish -c Release
 4. Set up environment variables for production
 5. Configure JWT secrets and database connections
 
+### Docker Deployment
+See `DOCKER.md` for detailed Docker deployment instructions.
+
 ## Security Considerations
 
+### JWT Security
+1. **Secret Key**: Use a strong, unique secret key (32+ characters)
+2. **Token Expiration**: Set appropriate expiration times
+3. **HTTPS**: Use SSL/TLS for all communications
+4. **Token Storage**: Secure token storage in AsyncStorage
+5. **Token Refresh**: Implement secure refresh token rotation
+
 ### Production Security
-1. **JWT Implementation**: Replace simple tokens with proper JWT
+1. **JWT Implementation**: Implemented proper JWT
 2. **Database Security**: Use encrypted database connections
 3. **Password Hashing**: Implement bcrypt for password security
 4. **HTTPS**: Use SSL/TLS for all communications
@@ -416,9 +502,9 @@ dotnet publish -c Release
 8. **CORS Configuration**: Restrict cross-origin requests
 
 ### Authentication Security
-1. **Token Expiration**: Implement proper token expiration
-2. **Refresh Token Rotation**: Rotate refresh tokens on use
-3. **Session Management**: Track active sessions
+1. **Token Expiration**: 24-hour access tokens, 7-day refresh tokens
+2. **Refresh Token Rotation**: Automatic token refresh
+3. **Session Management**: Automatic logout on token expiration
 4. **Audit Logging**: Log all authentication events
 5. **Account Lockout**: Implement failed login protection
 
@@ -467,10 +553,11 @@ For issues and questions:
 
 - [x] User authentication and authorization
 - [x] Role-based access control
-- [ ] Database integration (SQL Server/PostgreSQL)
-- [ ] JWT implementation
-- [ ] Real-time synchronization
+- [x] JWT implementation
 - [x] Advanced analytics and reporting
+- [x] Centralized API configuration
+- [ ] Database integration (SQL Server/PostgreSQL)
+- [ ] Real-time synchronization
 - [ ] Export functionality (CSV, PDF)
 - [ ] Push notifications
 - [ ] Offline-first architecture

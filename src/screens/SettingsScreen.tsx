@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { CompanySelector } from '../components/CompanySelector';
+import { UserSelector } from '../components/UserSelector';
+import { ManagerSelector } from '../components/ManagerSelector';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
@@ -16,6 +18,8 @@ import { Company } from '../types';
 
 export const SettingsScreen: React.FC = () => {
   const [showCompanySelector, setShowCompanySelector] = useState(false);
+  const [showUserSelector, setShowUserSelector] = useState(false);
+  const [showManagerSelector, setShowManagerSelector] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
   const [userCompany, setUserCompany] = useState<Company | null>(null);
   const { user, logout } = useAuth();
@@ -39,8 +43,15 @@ export const SettingsScreen: React.FC = () => {
   }, [user?.companyId]);
 
   const handleCompanyChange = () => {
-    // This will trigger a refresh of data in other screens when they come into focus
     console.log('Company selection changed, other screens will refresh on focus');
+  };
+
+  const handleUserChange = () => {
+    console.log('User selection changed');
+  };
+
+  const handleManagerChange = () => {
+    console.log('Manager selection changed');
   };
 
   const handleLogout = () => {
@@ -64,6 +75,11 @@ export const SettingsScreen: React.FC = () => {
     );
   };
 
+  const isAdmin = user?.role === 'Admin';
+  const isManager = user?.role === 'Manager';
+  const canManageUsers = isAdmin || isManager;
+  const canManageManagers = isAdmin;
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -72,28 +88,25 @@ export const SettingsScreen: React.FC = () => {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        
-        
+        {/* User Information Section */}
         <TouchableOpacity style={styles.section} onPress={() => setShowLogout(!showLogout)}>
-          {/* User Information */}
           {user && (
             <View style={styles.userInfo}>
-            <View style={styles.userAvatar}>
-              <MaterialIcons name="person" size={24} color="white" />
+              <View style={styles.userAvatar}>
+                <MaterialIcons name="person" size={24} color="white" />
+              </View>
+              <View style={styles.userDetails}>
+                <Text style={styles.userName}>{user.firstName} {user.lastName}</Text>
+                <Text style={styles.userEmail}>{user.email}</Text>
+                <Text style={styles.userRole}>Role: {user.role}</Text>
+                {user.role !== 'Admin' && (
+                  <Text style={styles.userEmail}>
+                    Company: {userCompany ? userCompany.name : user.companyId }
+                  </Text>
+                )}
+              </View>
             </View>
-            <View style={styles.userDetails}>
-              <Text style={styles.userName}>{user.firstName} {user.lastName}</Text>
-              <Text style={styles.userEmail}>{user.email}</Text>
-              <Text style={styles.userRole}>Role: {user.role}</Text>
-              {user.role !== 'Admin' && (
-                <Text style={styles.userEmail}>
-                  Company: {userCompany ? userCompany.name : user.companyId }
-                </Text>
-              )}
-            </View>
-          </View>
           )}
-
 
           {showLogout && (
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -101,14 +114,11 @@ export const SettingsScreen: React.FC = () => {
               <Text style={styles.logoutText}>Logout</Text>
             </TouchableOpacity>
           )}
-
-          
         </TouchableOpacity>
-        
 
-        {/* Companies Section - Only show if user doesn't have a company assigned */}
-        {!user?.companyId && (
-          <TouchableOpacity  onPress={() => setShowCompanySelector(!showCompanySelector)}>
+        {/* Companies Section - Only show for Admin */}
+        {isAdmin && (
+          <TouchableOpacity onPress={() => setShowCompanySelector(!showCompanySelector)}>
             {showCompanySelector ? (
               <View style={styles.companySection}>
                 <CompanySelector onCompanyChange={handleCompanyChange} />
@@ -118,6 +128,34 @@ export const SettingsScreen: React.FC = () => {
             )}
           </TouchableOpacity>
         )}
+
+        {/* Manager Section - Only for Admin */}
+        {canManageManagers && (
+          <TouchableOpacity onPress={() => setShowManagerSelector(!showManagerSelector)}>
+            {showManagerSelector ? (
+              <View style={styles.managerSection}>
+                <ManagerSelector onManagerChange={handleManagerChange} />
+              </View>
+            ) : (
+              <Text style={styles.managerText}>Manager Menu</Text>
+            )}
+          </TouchableOpacity>
+        )}
+
+        {/* User Section - Only for Admin and Manager */}
+        {canManageUsers && (
+          <TouchableOpacity onPress={() => setShowUserSelector(!showUserSelector)}>
+            {showUserSelector ? (
+              <View style={styles.userSection}>
+                <UserSelector onUserChange={handleUserChange} />
+              </View>
+            ) : (
+              <Text style={styles.userText}>User Menu</Text>
+            )}
+          </TouchableOpacity>
+        )}
+
+        
       </ScrollView>
     </View>
   );
@@ -195,7 +233,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 16,
   },
   companyText: {
     textAlign: 'center',
@@ -206,6 +243,41 @@ const styles = StyleSheet.create({
     borderColor: '#007AFF',
     borderRadius: 8,
     padding: 12,
+  },
+  userSection: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 32,
+  },
+  userText: {
+    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#007AFF',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    borderRadius: 8,
+    padding: 12,
+  },
+  managerSection: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    marginTop: 12,
+  },
+  managerText: {
+    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#007AFF',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 12,
+    marginBottom: 12,
   },
   logoutButton: {
     flexDirection: 'row',

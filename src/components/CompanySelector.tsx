@@ -371,7 +371,7 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
               style={styles.saveButton}
               onPress={handleSubmit}
             >
-              <Text style={styles.saveButtonText}>Save</Text>
+              <Text style={styles.saveButtonText}>{editingCompany ? 'Update' : 'Create'}</Text>
             </TouchableOpacity>
           </View>
         </View>

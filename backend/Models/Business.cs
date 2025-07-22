@@ -15,7 +15,7 @@ namespace CanvassingBackend.Models
         public string Phone { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Website { get; set; } = string.Empty;
-        public string Notes { get; set; } = string.Empty;
+        public List<string> Notes { get; set; } = new List<string>();
         
         public double Latitude { get; set; }
         public double Longitude { get; set; }

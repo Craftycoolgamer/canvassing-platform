@@ -31,3 +31,4 @@ C:\Users\quinn\canvassing-platform\backend\bin\Debug\net8.0\Microsoft.IdentityMo
 C:\Users\quinn\canvassing-platform\backend\bin\Debug\net8.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
 C:\Users\quinn\canvassing-platform\backend\bin\Debug\net8.0\Microsoft.IdentityModel.Tokens.dll
 C:\Users\quinn\canvassing-platform\backend\bin\Debug\net8.0\System.IdentityModel.Tokens.Jwt.dll
+C:\Users\quinn\canvassing-platform\backend\bin\Debug\net8.0\appsettings.json

@@ -28,6 +28,8 @@ namespace CanvassingBackend.Models
         
         public bool IsActive { get; set; } = true;
         
+        public bool CanManagePins { get; set; } = false; // Controls pin management permissions
+        
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

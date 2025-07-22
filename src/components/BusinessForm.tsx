@@ -11,6 +11,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { Business, Company, BusinessFormData } from '../types';
 import { validateEmail, validatePhone, validateWebsite } from '../utils';
+import { useAuth } from '../contexts/AuthContext';
 
 interface BusinessFormProps {
   business?: Business;
@@ -30,13 +31,16 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
   console.log('BusinessForm - companies received:', companies.length);
   console.log('BusinessForm - companies:', companies);
 
+  const { user: currentUser } = useAuth();
+  const canManagePins = currentUser?.canManagePins || false;
+
   const [formData, setFormData] = useState<BusinessFormData>({
     name: '',
     address: '',
     phone: '',
     email: '',
     website: '',
-    notes: '',
+    notes: [],
     latitude: 0,
     longitude: 0,
     companyId: '',
@@ -53,7 +57,7 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
         phone: business.phone,
         email: business.email,
         website: business.website,
-        notes: business.notes,
+        notes: business.notes || [],
         latitude: business.latitude,
         longitude: business.longitude,
         companyId: business.companyId,
@@ -108,6 +112,15 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
   };
 
   const handleSubmit = () => {
+    if (!canManagePins) {
+      // Alert.alert(
+      //   'Permission Denied',
+      //   'You do not have permission to edit business pins. Please contact your administrator.',
+      //   [{ text: 'OK' }]
+      // );
+      return;
+    }
+
     if (validateForm()) {
       onSubmit(formData);
     }
@@ -118,6 +131,26 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
     }
+  };
+
+  const updateNote = (index: number, value: string) => {
+    setFormData(prev => {
+      const notes = [...prev.notes];
+      notes[index] = value;
+      return { ...prev, notes };
+    });
+  };
+
+  const addNote = () => {
+    setFormData(prev => ({ ...prev, notes: [...prev.notes, ''] }));
+  };
+
+  const removeNote = (index: number) => {
+    setFormData(prev => {
+      const notes = [...prev.notes];
+      notes.splice(index, 1);
+      return { ...prev, notes };
+    });
   };
 
   return (
@@ -135,10 +168,11 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
         <View style={styles.field}>
           <Text style={styles.label}>Business Name *</Text>
           <TextInput
-            style={[styles.input, errors.name && styles.inputError]}
+            style={[styles.input, errors.name && styles.inputError, !canManagePins && styles.disabledInput]}
             value={formData.name}
             onChangeText={(value) => updateField('name', value)}
             placeholder="Enter business name"
+            editable={canManagePins}
           />
           {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
         </View>
@@ -146,11 +180,12 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
         <View style={styles.field}>
           <Text style={styles.label}>Address *</Text>
           <TextInput
-            style={[styles.input, errors.address && styles.inputError]}
+            style={[styles.input, errors.address && styles.inputError, !canManagePins && styles.disabledInput]}
             value={formData.address}
             onChangeText={(value) => updateField('address', value)}
             placeholder="Enter address"
             multiline
+            editable={canManagePins}
           />
           {errors.address && <Text style={styles.errorText}>{errors.address}</Text>}
         </View>
@@ -159,11 +194,12 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
           <View style={[styles.field, styles.halfField]}>
             <Text style={styles.label}>Phone</Text>
             <TextInput
-              style={[styles.input, errors.phone && styles.inputError]}
+              style={[styles.input, errors.phone && styles.inputError, !canManagePins && styles.disabledInput]}
               value={formData.phone}
               onChangeText={(value) => updateField('phone', value)}
               placeholder="Enter phone number"
               keyboardType="phone-pad"
+              editable={canManagePins}
             />
             {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
           </View>
@@ -171,12 +207,13 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
           <View style={[styles.field, styles.halfField]}>
             <Text style={styles.label}>Email</Text>
             <TextInput
-              style={[styles.input, errors.email && styles.inputError]}
+              style={[styles.input, errors.email && styles.inputError, !canManagePins && styles.disabledInput]}
               value={formData.email}
               onChangeText={(value) => updateField('email', value)}
               placeholder="Enter email"
               keyboardType="email-address"
               autoCapitalize="none"
+              editable={canManagePins}
             />
             {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
           </View>
@@ -185,12 +222,13 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
         <View style={styles.field}>
           <Text style={styles.label}>Website</Text>
           <TextInput
-            style={[styles.input, errors.website && styles.inputError]}
+            style={[styles.input, errors.website && styles.inputError, !canManagePins && styles.disabledInput]}
             value={formData.website}
             onChangeText={(value) => updateField('website', value)}
             placeholder="Enter website URL"
             keyboardType="url"
             autoCapitalize="none"
+            editable={canManagePins}
           />
           {errors.website && <Text style={styles.errorText}>{errors.website}</Text>}
         </View>
@@ -204,8 +242,10 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
                 style={[
                   styles.companyOption,
                   formData.companyId === company.id && styles.selectedCompany,
+                  !canManagePins && styles.disabledOption,
                 ]}
-                onPress={() => updateField('companyId', company.id)}
+                onPress={() => canManagePins && updateField('companyId', company.id)}
+                disabled={!canManagePins}
               >
                 <View style={[styles.companyIcon, { backgroundColor: company.color }]}>
                   <MaterialIcons name={company.pinIcon as any} size={16} color="white" />
@@ -226,8 +266,10 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
                 style={[
                   styles.statusOption,
                   formData.status === status && styles.selectedStatus,
+                  !canManagePins && styles.disabledOption,
                 ]}
-                onPress={() => updateField('status', status)}
+                onPress={() => canManagePins && updateField('status', status)}
+                disabled={!canManagePins}
               >
                 <Text style={[
                   styles.statusText,
@@ -242,23 +284,45 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
 
         <View style={styles.field}>
           <Text style={styles.label}>Notes</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={formData.notes}
-            onChangeText={(value) => updateField('notes', value)}
-            placeholder="Enter notes"
-            multiline
-            numberOfLines={4}
-          />
+          {formData.notes.map((note, idx) => (
+            <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <TextInput
+                style={[styles.input, styles.textArea, { flex: 1 }, !canManagePins && styles.disabledInput]}
+                value={note}
+                onChangeText={(value) => updateNote(idx, value)}
+                placeholder={`Note #${idx + 1}`}
+                multiline
+                numberOfLines={2}
+                editable={canManagePins}
+              />
+              {canManagePins && (
+                <TouchableOpacity onPress={() => removeNote(idx)} style={{ marginLeft: 8 }}>
+                  <MaterialIcons name="remove-circle" size={24} color="#ff3b30" />
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
+          {canManagePins && (
+            <TouchableOpacity onPress={addNote} style={{ marginTop: 4, alignSelf: 'flex-start' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <MaterialIcons name="add-circle" size={20} color="#007AFF" />
+                <Text style={{ color: '#007AFF', marginLeft: 4 }}>Add Note</Text>
+              </View>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={styles.cancelBtn} onPress={onCancel}>
             <Text style={styles.cancelBtnText}>Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-            <Text style={styles.submitBtnText}>
-              {business ? 'Update' : 'Add'} Business
+          <TouchableOpacity 
+            style={[styles.submitBtn, !canManagePins && styles.disabledButton]} 
+            onPress={handleSubmit}
+            disabled={!canManagePins}
+          >
+            <Text style={[styles.submitBtnText, !canManagePins && styles.disabledButtonText]}>
+              {!canManagePins ? 'No Permission' : (business ? 'Update' : 'Add') + ' Business'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -318,6 +382,10 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: '#ff3b30',
+  },
+  disabledInput: {
+    backgroundColor: '#e0e0e0',
+    color: '#888',
   },
   textArea: {
     height: 100,
@@ -412,5 +480,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'white',
     fontWeight: '500',
+  },
+  disabledOption: {
+    opacity: 0.7,
+  },
+  disabledButton: {
+    backgroundColor: '#e0e0e0',
+    opacity: 0.7,
+  },
+  disabledButtonText: {
+    color: '#888',
   },
 }); 

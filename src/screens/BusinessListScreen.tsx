@@ -18,6 +18,8 @@ import { apiService } from '../services/api';
 import { BusinessCard } from '../components/BusinessCard';
 import { BusinessForm } from '../components/BusinessForm';
 import { searchBusinesses, filterBusinessesByStatus } from '../utils';
+import { BusinessStatusNotesModal } from '../components/BusinessStatusNotesModal';
+import { useAuth } from '../contexts/AuthContext';
 
 export const BusinessListScreen: React.FC = () => {
   const [businesses, setBusinesses] = useState<Business[]>([]);
@@ -30,6 +32,10 @@ export const BusinessListScreen: React.FC = () => {
   const [showFormModal, setShowFormModal] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [showStatusNotesModal, setShowStatusNotesModal] = useState(false);
+  const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
+  const { user: currentUser } = useAuth();
+  const canManagePins = currentUser?.canManagePins || false;
 
   useEffect(() => {
     loadData();
@@ -169,8 +175,13 @@ export const BusinessListScreen: React.FC = () => {
   };
 
   const handleBusinessPress = (business: Business) => {
-    setEditingBusiness(business);
-    setShowFormModal(true);
+    if (canManagePins) {
+      setEditingBusiness(business);
+      setShowFormModal(true);
+    } else {
+      setSelectedBusiness(business);
+      setShowStatusNotesModal(true);
+    }
   };
 
   const handleFormSubmit = async (formData: any) => {
@@ -230,6 +241,29 @@ export const BusinessListScreen: React.FC = () => {
         },
       ]
     );
+  };
+
+  const handleStatusNotesSave = async (status: Business['status'], notes: string[]) => {
+    if (!selectedBusiness) return;
+    try {
+      // Create updated business object with only status and notes changed
+      const updatedBusiness = {
+        ...selectedBusiness,
+        status,
+        notes,
+      };
+      
+      const response = await apiService.updateBusiness(selectedBusiness.id, updatedBusiness);
+      if (response.success) {
+        await loadData();
+        setShowStatusNotesModal(false);
+        setSelectedBusiness(null);
+      } else {
+        Alert.alert('Error', response.error || 'Failed to update business');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update business');
+    }
   };
 
   const getCompanyForBusiness = (business: Business): Company | undefined => {
@@ -370,6 +404,17 @@ export const BusinessListScreen: React.FC = () => {
           }}
         />
       </Modal>
+
+      {/* Status/Notes Modal for users without pin permissions */}
+      {selectedBusiness && (
+        <BusinessStatusNotesModal
+          visible={showStatusNotesModal}
+          business={selectedBusiness}
+          companies={companies}
+          onClose={() => { setShowStatusNotesModal(false); setSelectedBusiness(null); }}
+          onSave={handleStatusNotesSave}
+        />
+      )}
     </View>
   );
 };

@@ -1,0 +1,41 @@
+
+
+services:
+  canvassing-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:3000
+      - JWT__SecretKey=your-super-secret-key-with-at-least-32-characters-for-development
+      - JWT__Issuer=CanvassingAPI
+      - JWT__Audience=CanvassingApp
+      - JWT__TokenExpirationHours=24
+      - JWT__RefreshTokenExpirationDays=7
+    restart: unless-stopped
+    networks:
+      - canvassing-network
+
+  # Optional: Add a database service for production
+  # postgres:
+  #   image: postgres:15
+  #   environment:
+  #     POSTGRES_DB: canvassing
+  #     POSTGRES_USER: canvassing_user
+  #     POSTGRES_PASSWORD: your_secure_password
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - canvassing-network
+
+networks:
+  canvassing-network:
+    driver: bridge
+
+# volumes:
+#   postgres_data: 

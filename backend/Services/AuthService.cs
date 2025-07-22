@@ -7,11 +7,13 @@ namespace CanvassingBackend.Services
     public class AuthService
     {
         private readonly DataService _dataService;
+        private readonly JwtService _jwtService;
         private readonly ConcurrentDictionary<string, RefreshToken> _refreshTokens = new();
 
-        public AuthService(DataService dataService)
+        public AuthService(DataService dataService, JwtService jwtService)
         {
             _dataService = dataService;
+            _jwtService = jwtService;
         }
 
         public AuthResponse? Login(LoginRequest request)
@@ -80,40 +82,24 @@ namespace CanvassingBackend.Services
 
         private AuthResponse GenerateAuthResponse(User user)
         {
-            var token = GenerateSimpleToken(user);
-            var refreshToken = GenerateRefreshToken();
-            var expiresAt = DateTime.UtcNow.AddHours(24); // 24 hour token
+            var accessToken = _jwtService.GenerateAccessToken(user);
+            var refreshToken = _jwtService.GenerateRefreshToken();
+            var expiresAt = DateTime.UtcNow.AddHours(_jwtService.GetTokenExpirationHours());
 
             _refreshTokens.TryAdd(refreshToken, new RefreshToken
             {
                 Token = refreshToken,
                 UserId = user.Id,
-                ExpiresAt = DateTime.UtcNow.AddDays(7) // 7 day refresh token
+                ExpiresAt = DateTime.UtcNow.AddDays(_jwtService.GetRefreshTokenExpirationDays())
             });
 
             return new AuthResponse
             {
-                Token = token,
+                Token = accessToken,
                 RefreshToken = refreshToken,
                 ExpiresAt = expiresAt,
                 User = user
             };
-        }
-
-        private string GenerateSimpleToken(User user)
-        {
-            // Simple token format: base64(userId:role:expiry)
-            var tokenData = $"{user.Id}:{user.Role}:{DateTime.UtcNow.AddHours(24):O}";
-            var bytes = System.Text.Encoding.UTF8.GetBytes(tokenData);
-            return Convert.ToBase64String(bytes);
-        }
-
-        private string GenerateRefreshToken()
-        {
-            var randomNumber = new byte[64];
-            using var rng = RandomNumberGenerator.Create();
-            rng.GetBytes(randomNumber);
-            return Convert.ToBase64String(randomNumber);
         }
 
         private string HashPassword(string password)

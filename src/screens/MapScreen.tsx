@@ -19,6 +19,8 @@ import { getStatusColor, getStatusText, formatDate } from '../utils';
 import { BusinessForm } from '../components/BusinessForm';
 import { Map } from '../components/Map';
 import { BusinessList } from '../components/BusinessList';
+import { useAuth } from '../contexts/AuthContext';
+import { BusinessStatusNotesModal } from '../components/BusinessStatusNotesModal';
 
 export const MapScreen: React.FC = () => {
   const [businesses, setBusinesses] = useState<Business[]>([]);
@@ -33,6 +35,11 @@ export const MapScreen: React.FC = () => {
   const [selectedCoordinates, setSelectedCoordinates] = useState<{latitude: number, longitude: number} | null>(null);
   const [mapCenter, setMapCenter] = useState<{latitude: number, longitude: number}>({ latitude: 37.7749, longitude: -122.4194 });
   const mapRef = useRef<any>(null);
+  const { user: currentUser } = useAuth();
+  const [showStatusNotesModal, setShowStatusNotesModal] = useState(false);
+
+  // Check if user can manage pins
+  const canManagePins = currentUser?.canManagePins || false;
 
   useEffect(() => {
     loadData();
@@ -184,20 +191,35 @@ export const MapScreen: React.FC = () => {
 
   const handleMarkerPress = (business: Business) => {
     setSelectedBusiness(business);
-    setShowBusinessModal(true);
+    if (canManagePins) {
+      setShowBusinessModal(true);
+    } else {
+      setShowStatusNotesModal(true);
+    }
   };
 
   const handleBusinessPress = (business: Business) => {
     setSelectedBusiness(business);
-    setShowBusinessModal(true);
-    
-    // Zoom to the business location on the map
-    if (mapRef.current) {
+    if (canManagePins) {
+      setShowBusinessModal(true);
+    } else {
+      setShowStatusNotesModal(true);
+    }
+    if (mapRef.current && canManagePins) {
       mapRef.current.zoomToLocation(business.latitude, business.longitude);
     }
   };
 
   const handleMapTap = (latitude: number, longitude: number) => {
+    if (!canManagePins) {
+      // Alert.alert(
+      //   'Permission Denied',
+      //   'You do not have permission to add business pins. Please contact your administrator.',
+      //   [{ text: 'OK' }]
+      // );
+      return;
+    }
+    
     console.log('Map tapped at:', latitude, longitude);
     setSelectedCoordinates({ latitude, longitude });
     setEditingBusiness(null);
@@ -210,12 +232,30 @@ export const MapScreen: React.FC = () => {
   };
 
   const handleEditBusiness = (business: Business) => {
+    if (!canManagePins) {
+      // Alert.alert(
+      //   'Permission Denied',
+      //   'You do not have permission to edit business pins. Please contact your administrator.',
+      //   [{ text: 'OK' }]
+      // );
+      return;
+    }
+
     setEditingBusiness(business);
     setShowBusinessModal(false);
     setShowFormModal(true);
   };
 
   const handleDeleteBusiness = (business: Business) => {
+    if (!canManagePins) {
+      // Alert.alert(
+      //   'Permission Denied',
+      //   'You do not have permission to delete business pins. Please contact your administrator.',
+      //   [{ text: 'OK' }]
+      // );
+      return;
+    }
+
     Alert.alert(
       'Delete Business',
       `Are you sure you want to delete "${business.name}"?`,
@@ -279,6 +319,29 @@ export const MapScreen: React.FC = () => {
     } catch (error) {
       console.error('Error saving business:', error);
       Alert.alert('Error', 'Failed to save business');
+    }
+  };
+
+  const handleStatusNotesSave = async (status: Business['status'], notes: string[]) => {
+    if (!selectedBusiness) return;
+    try {
+      // Create updated business object with only status and notes changed
+      const updatedBusiness = {
+        ...selectedBusiness,
+        status,
+        notes,
+      };
+      
+      const response = await apiService.updateBusiness(selectedBusiness.id, updatedBusiness);
+      if (response.success) {
+        await loadData();
+        setShowStatusNotesModal(false);
+        setSelectedBusiness(null);
+      } else {
+        Alert.alert('Error', response.error || 'Failed to update business');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update business');
     }
   };
 
@@ -410,26 +473,51 @@ export const MapScreen: React.FC = () => {
               </ScrollView>
 
               <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => handleEditBusiness(selectedBusiness)}
-                >
-                  <MaterialIcons name="edit" size={20} color="#007AFF" />
-                  <Text style={styles.actionButtonText}>Edit</Text>
-                </TouchableOpacity>
+                {canManagePins && (
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => handleEditBusiness(selectedBusiness)}
+                  >
+                    <MaterialIcons name="edit" size={20} color="#007AFF" />
+                    <Text style={styles.actionButtonText}>Edit</Text>
+                  </TouchableOpacity>
+                )}
 
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.deleteButton]}
-                  onPress={() => handleDeleteBusiness(selectedBusiness)}
-                >
-                  <MaterialIcons name="delete" size={20} color="#FF3B30" />
-                  <Text style={[styles.actionButtonText, styles.deleteButtonText]}>Delete</Text>
-                </TouchableOpacity>
+                {canManagePins && (
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.deleteButton]}
+                    onPress={() => handleDeleteBusiness(selectedBusiness)}
+                  >
+                    <MaterialIcons name="delete" size={20} color="#FF3B30" />
+                    <Text style={[styles.actionButtonText, styles.deleteButtonText]}>Delete</Text>
+                  </TouchableOpacity>
+                )}
+
+                {!canManagePins && (
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.viewOnlyButton]}
+                    onPress={() => setShowBusinessModal(false)}
+                  >
+                    <MaterialIcons name="close" size={20} color="#666" />
+                    <Text style={[styles.actionButtonText, styles.viewOnlyButtonText]}>Close</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </View>
         )}
       </Modal>
+
+      {/* Status/Notes Modal for users without pin permissions */}
+      {selectedBusiness && (
+        <BusinessStatusNotesModal
+          visible={showStatusNotesModal}
+          business={selectedBusiness}
+          companies={companies}
+          onClose={() => { setShowStatusNotesModal(false); setSelectedBusiness(null); }}
+          onSave={handleStatusNotesSave}
+        />
+      )}
 
       {/* Business Form Modal */}
       <Modal
@@ -522,12 +610,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(0,0,0,0.3)',
+    
   },
   modalContainer: {
     backgroundColor: '#f8f9fa',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingBottom: 24,
+    paddingBottom: 0,
     paddingTop: 0,
     width: '100%',
     alignSelf: 'center', // Center horizontally
@@ -541,6 +630,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   modalTitle: {
     fontSize: 20,
@@ -605,5 +696,12 @@ const styles = StyleSheet.create({
   },
   deleteButtonText: {
     color: '#FF3B30',
+  },
+  viewOnlyButton: {
+    borderColor: '#e0e0e0',
+    backgroundColor: '#f8f9fa',
+  },
+  viewOnlyButtonText: {
+    color: '#666',
   },
 }); 

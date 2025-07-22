@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  canvassing-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    ports:
+      - "3000:3000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:3000
+      - JWT__SecretKey=${JWT_SECRET_KEY}
+      - JWT__Issuer=${JWT_ISSUER:-CanvassingAPI}
+      - JWT__Audience=${JWT_AUDIENCE:-CanvassingApp}
+      - JWT__TokenExpirationHours=${JWT_TOKEN_EXPIRATION_HOURS:-24}
+      - JWT__RefreshTokenExpirationDays=${JWT_REFRESH_TOKEN_EXPIRATION_DAYS:-7}
+    restart: unless-stopped
+    networks:
+      - canvassing-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Database for production (uncomment when ready)
+  # postgres:
+  #   image: postgres:15-alpine
+  #   environment:
+  #     POSTGRES_DB: ${POSTGRES_DB:-canvassing}
+  #     POSTGRES_USER: ${POSTGRES_USER:-canvassing_user}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - canvassing-network
+  #   restart: unless-stopped
+
+  # Redis for caching (optional)
+  # redis:
+  #   image: redis:7-alpine
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   networks:
+  #     - canvassing-network
+  #   restart: unless-stopped
+
+networks:
+  canvassing-network:
+    driver: bridge
+
+volumes:
+  # postgres_data:
+  # redis_data: 

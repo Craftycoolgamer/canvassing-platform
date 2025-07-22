@@ -14,7 +14,7 @@ export interface Business {
   phone: string;
   email: string;
   website: string;
-  notes: string;
+  notes: string[];
   latitude: number;
   longitude: number;
   companyId: string;
@@ -33,6 +33,7 @@ export interface User {
   role: 'Admin' | 'Manager' | 'User';
   companyId?: string;
   isActive: boolean;
+  canManagePins: boolean;
   lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -80,7 +81,7 @@ export interface BusinessFormData {
   phone: string;
   email: string;
   website: string;
-  notes: string;
+  notes: string[];
   latitude: number;
   longitude: number;
   companyId: string;
@@ -91,6 +92,25 @@ export interface CompanyFormData {
   name: string;
   pinIcon: string;
   color: string;
+}
+
+export interface UserFormData {
+  email: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  password?: string;
+  role: 'Admin' | 'Manager' | 'User';
+  companyId?: string;
+  isActive?: boolean;
+  canManagePins?: boolean;
+}
+export interface ManagerFormData {
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  companyId: string;
 }
 
 export interface ApiResponse<T> {

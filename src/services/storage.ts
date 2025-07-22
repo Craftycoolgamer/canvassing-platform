@@ -1,9 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Business, Company } from '../types';
+import { Business, Company, User } from '../types';
 
 export class StorageService {
   private static readonly COMPANIES_KEY = 'companies';
   private static readonly BUSINESSES_KEY = 'businesses';
+  private static readonly USERS_KEY = 'users';
 
   // Company operations
   static async saveCompany(company: Company): Promise<void> {
@@ -41,6 +42,46 @@ export class StorageService {
       await AsyncStorage.setItem(this.COMPANIES_KEY, JSON.stringify(filteredCompanies));
     } catch (error) {
       console.error('Error deleting company:', error);
+      throw error;
+    }
+  }
+
+  // User operations
+  static async saveUser(user: User): Promise<void> {
+    try {
+      const users = await this.getUsers();
+      const existingIndex = users.findIndex(u => u.id === user.id);
+      
+      if (existingIndex >= 0) {
+        users[existingIndex] = user;
+      } else {
+        users.push(user);
+      }
+      
+      await AsyncStorage.setItem(this.USERS_KEY, JSON.stringify(users));
+    } catch (error) {
+      console.error('Error saving user:', error);
+      throw error;
+    }
+  }
+
+  static async getUsers(): Promise<User[]> {
+    try {
+      const data = await AsyncStorage.getItem(this.USERS_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('Error getting users:', error);
+      return [];
+    }
+  }
+
+  static async deleteUser(id: string): Promise<void> {
+    try {
+      const users = await this.getUsers();
+      const filteredUsers = users.filter(u => u.id !== id);
+      await AsyncStorage.setItem(this.USERS_KEY, JSON.stringify(filteredUsers));
+    } catch (error) {
+      console.error('Error deleting user:', error);
       throw error;
     }
   }
@@ -98,7 +139,7 @@ export class StorageService {
   // Clear all data
   static async clearAll(): Promise<void> {
     try {
-      await AsyncStorage.multiRemove([this.COMPANIES_KEY, this.BUSINESSES_KEY]);
+      await AsyncStorage.multiRemove([this.COMPANIES_KEY, this.BUSINESSES_KEY, this.USERS_KEY]);
     } catch (error) {
       console.error('Error clearing data:', error);
       throw error;

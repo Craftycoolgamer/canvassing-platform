@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, LoginRequest, RegisterRequest, AuthResponse, RefreshTokenRequest, ApiResponse } from '../types';
+import { buildApiUrl } from '../config/api';
 
 class AuthService {
   private static readonly TOKEN_KEY = 'auth_token';
@@ -9,7 +10,7 @@ class AuthService {
   // Login user
   static async login(email: string, password: string): Promise<ApiResponse<AuthResponse>> {
     try {
-      const response = await fetch('http://192.168.1.34:3000/api/auth/login', {
+      const response = await fetch(buildApiUrl('/auth/login'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -40,7 +41,7 @@ class AuthService {
   // Register user
   static async register(userData: RegisterRequest): Promise<ApiResponse<AuthResponse>> {
     try {
-      const response = await fetch('http://192.168.1.34:3000/api/auth/register', {
+      const response = await fetch(buildApiUrl('/auth/register'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -79,7 +80,7 @@ class AuthService {
         };
       }
 
-      const response = await fetch('http://192.168.1.34:3000/api/auth/refresh', {
+      const response = await fetch(buildApiUrl('/auth/refresh'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -116,7 +117,7 @@ class AuthService {
       const refreshToken = await this.getRefreshToken();
       if (refreshToken) {
         // Revoke token on server
-        await fetch('http://192.168.1.34:3000/api/auth/logout', {
+        await fetch(buildApiUrl('/auth/logout'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
