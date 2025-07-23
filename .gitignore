@@ -38,5 +38,7 @@ yarn-error.*
 
 .vscode
 
-backend/bin
-backend/obj
+
+backend/bin/
+
+backend/obj/

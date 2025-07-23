@@ -455,29 +455,83 @@ namespace CanvassingBackend
         {
             try
             {
-                // Get the host name
-                var hostName = System.Net.Dns.GetHostName();
+                // Get all network interfaces
+                var networkInterfaces = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
                 
-                // Get all IP addresses for the host
-                var host = System.Net.Dns.GetHostEntry(hostName);
-                
-                // Find the first non-loopback IPv4 address
-                foreach (var ip in host.AddressList)
+                // Filter for active, non-loopback interfaces
+                var activeInterfaces = networkInterfaces
+                    .Where(ni => ni.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up &&
+                                 ni.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Loopback)
+                    .ToList();
+
+                // First, try to find an internal IP address
+                foreach (var ni in activeInterfaces)
                 {
-                    if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                    var properties = ni.GetIPProperties();
+                    var ipv4Addresses = properties.UnicastAddresses
+                        .Where(addr => addr.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                        .Select(addr => addr.Address)
+                        .ToList();
+
+                    foreach (var ip in ipv4Addresses)
                     {
-                        return ip.ToString();
+                        var ipString = ip.ToString();
+                        
+                        // Return the first private IP we find
+                        if (IsPrivateIP(ip))
+                            return ipString;
                     }
                 }
+
+                // If no internal IP found, try to find an external/public IP address
+                foreach (var ni in activeInterfaces)
+                {
+                    var properties = ni.GetIPProperties();
+                    var ipv4Addresses = properties.UnicastAddresses
+                        .Where(addr => addr.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                        .Select(addr => addr.Address)
+                        .ToList();
+
+                    foreach (var ip in ipv4Addresses)
+                    {
+                        var ipString = ip.ToString();
+                        
+                        // Skip private IP ranges
+                        if (IsPrivateIP(ip))
+                            continue;
+                            
+                        // This is likely a public/external IP
+                        return ipString;
+                    }
+                }
+
                 
-                // Fallback to localhost if no network IP found
+
+                // Fallback to localhost if no suitable IP found
                 return "localhost";
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Console.WriteLine($"Error getting local IP address: {ex.Message}");
                 // Fallback to localhost if any error occurs
                 return "localhost";
             }
+        }
+
+        private static bool IsPrivateIP(System.Net.IPAddress ip)
+        {
+            var bytes = ip.GetAddressBytes();
+            
+            // Private IP ranges:
+            // 10.0.0.0 - 10.255.255.255
+            // 172.16.0.0 - 172.31.255.255
+            // 192.168.0.0 - 192.168.255.255
+            // 127.0.0.0 - 127.255.255.255 (loopback)
+            
+            return (bytes[0] == 10) ||
+                   (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
+                   (bytes[0] == 192 && bytes[1] == 168) ||
+                   (bytes[0] == 127);
         }
     }
 } 
