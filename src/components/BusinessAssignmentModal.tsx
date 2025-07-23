@@ -168,7 +168,6 @@ export const BusinessAssignmentModal: React.FC<BusinessAssignmentModalProps> = (
                             {user.firstName} {user.lastName}
                           </Text>
                           <Text style={styles.userEmail}>{user.email}</Text>
-                          <Text style={styles.userRole}>{user.role}</Text>
                         </View>
                         {selectedUserId === user.id && (
                           <MaterialIcons name="check" size={20} color="#007AFF" />

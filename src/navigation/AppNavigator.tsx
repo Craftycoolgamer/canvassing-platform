@@ -1,7 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialIcons } from '@expo/vector-icons';
-import { BusinessListScreen } from '../screens/BusinessListScreen';
+import { BusinessStackNavigator } from './BusinessStackNavigator';
 import { MapScreen } from '../screens/MapScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { AnalyticsScreen } from '../screens/AnalyticsScreen';
@@ -39,7 +39,7 @@ export const AppNavigator: React.FC = () => {
         headerShown: false,
       })}
     >
-      <Tab.Screen name="Business List" component={BusinessListScreen} />
+      <Tab.Screen name="Business List" component={BusinessStackNavigator} />
       <Tab.Screen name="Map" component={MapScreen} />
       {isManagerOrAdmin && (
         <Tab.Screen name="Analytics" component={AnalyticsScreen} />

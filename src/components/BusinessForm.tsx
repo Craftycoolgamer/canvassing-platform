@@ -7,11 +7,38 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Modal,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Business, Company, BusinessFormData } from '../types';
 import { validateEmail, validatePhone, validateWebsite } from '../utils';
 import { useAuth } from '../contexts/AuthContext';
+
+// Phone number formatting function
+const formatPhoneNumber = (input: string): string => {
+  // Remove all non-numeric characters
+  const cleaned = input.replace(/\D/g, '');
+  
+  // Format the number as (XXX) XXX-XXXX
+  if (cleaned.length >= 10) {
+    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
+  } else if (cleaned.length > 6) {
+    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+  } else if (cleaned.length > 3) {
+    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
+  } else if (cleaned.length > 0) {
+    return `(${cleaned}`;
+  }
+  return cleaned;
+};
+
+// Phone number validation function
+const isValidPhoneNumber = (phone: string): boolean => {
+  // Remove all non-numeric characters
+  const cleaned = phone.replace(/\D/g, '');
+  // Check if it's exactly 10 digits
+  return cleaned.length === 10;
+};
 
 interface BusinessFormProps {
   business?: Business;
@@ -48,13 +75,14 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
   });
 
   const [errors, setErrors] = useState<Partial<BusinessFormData>>({});
+  const [showStatusModal, setShowStatusModal] = useState(false);
 
   useEffect(() => {
     if (business) {
       setFormData({
         name: business.name,
         address: business.address,
-        phone: business.phone,
+        phone: formatPhoneNumber(business.phone), // Format existing phone number
         email: business.email,
         website: business.website,
         notes: business.notes || [],
@@ -106,12 +134,12 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
       newErrors.companyId = 'Company is required';
     }
 
-    if (formData.email && !validateEmail(formData.email)) {
-      newErrors.email = 'Invalid email format';
+    if (formData.phone && !isValidPhoneNumber(formData.phone)) {
+      newErrors.phone = 'Please enter a valid 10-digit phone number';
     }
 
-    if (formData.phone && !validatePhone(formData.phone)) {
-      newErrors.phone = 'Invalid phone number';
+    if (formData.email && !validateEmail(formData.email)) {
+      newErrors.email = 'Invalid email format';
     }
 
     if (formData.website && !validateWebsite(formData.website)) {
@@ -124,20 +152,25 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
 
   const handleSubmit = () => {
     if (!canManagePins) {
-      // Alert.alert(
-      //   'Permission Denied',
-      //   'You do not have permission to edit business pins. Please contact your administrator.',
-      //   [{ text: 'OK' }]
-      // );
       return;
     }
 
     if (validateForm()) {
-      onSubmit(formData);
+      // Clean phone number before submitting
+      const submissionData = {
+        ...formData,
+        phone: formData.phone.replace(/\D/g, ''),
+      };
+      onSubmit(submissionData);
     }
   };
 
   const updateField = (field: keyof BusinessFormData, value: string | number) => {
+    // Format phone number if the field is 'phone'
+    if (field === 'phone') {
+      value = formatPhoneNumber(value as string);
+    }
+
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
@@ -201,8 +234,22 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
           {errors.address && <Text style={styles.errorText}>{errors.address}</Text>}
         </View>
 
+        <View style={styles.field}>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={[styles.input, errors.email && styles.inputError, !canManagePins && styles.disabledInput]}
+            value={formData.email}
+            onChangeText={(value) => updateField('email', value)}
+            placeholder="Enter email"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            editable={canManagePins}
+          />
+          {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+        </View>
+
         <View style={styles.row}>
-          <View style={[styles.field, styles.halfField]}>
+          <View style={[styles.field, { flex: 3 }]}>
             <Text style={styles.label}>Phone</Text>
             <TextInput
               style={[styles.input, errors.phone && styles.inputError, !canManagePins && styles.disabledInput]}
@@ -215,18 +262,24 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
             {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
           </View>
 
-          <View style={[styles.field, styles.halfField]}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={[styles.input, errors.email && styles.inputError, !canManagePins && styles.disabledInput]}
-              value={formData.email}
-              onChangeText={(value) => updateField('email', value)}
-              placeholder="Enter email"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={canManagePins}
-            />
-            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+          <View style={[styles.field, { flex: 2, marginLeft: 12 }]}>
+            <Text style={styles.label}>Status</Text>
+            <TouchableOpacity
+              style={[
+                styles.dropdown,
+                !canManagePins && styles.disabledInput
+              ]}
+              disabled={!canManagePins}
+              onPress={() => canManagePins && setShowStatusModal(true)}
+            >
+              <Text style={[
+                styles.dropdownText,
+                !canManagePins && styles.disabledText
+              ]}>
+                {formData.status.charAt(0).toUpperCase() + formData.status.slice(1)}
+              </Text>
+              <MaterialIcons name="arrow-drop-down" size={24} color={canManagePins ? "#666" : "#888"} />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -284,31 +337,6 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Status</Text>
-          <View style={styles.statusContainer}>
-            {(['pending', 'contacted', 'completed', 'not-interested'] as const).map((status) => (
-              <TouchableOpacity
-                key={status}
-                style={[
-                  styles.statusOption,
-                  formData.status === status && styles.selectedStatus,
-                  !canManagePins && styles.disabledOption,
-                ]}
-                onPress={() => canManagePins && updateField('status', status)}
-                disabled={!canManagePins}
-              >
-                <Text style={[
-                  styles.statusText,
-                  formData.status === status && styles.selectedStatusText,
-                ]}>
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.field}>
           <Text style={styles.label}>Notes</Text>
           {formData.notes.map((note, idx) => (
             <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, marginHorizontal: 16 }}>
@@ -353,6 +381,52 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Status Selection Modal */}
+      <Modal
+        visible={showStatusModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowStatusModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowStatusModal(false)}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Status</Text>
+              <TouchableOpacity onPress={() => setShowStatusModal(false)}>
+                <MaterialIcons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            {(['pending', 'contacted', 'completed', 'not-interested'] as const).map((status) => (
+              <TouchableOpacity
+                key={status}
+                style={[
+                  styles.statusOption,
+                  formData.status === status && styles.selectedStatus
+                ]}
+                onPress={() => {
+                  updateField('status', status);
+                  setShowStatusModal(false);
+                }}
+              >
+                <Text style={[
+                  styles.statusOptionText,
+                  formData.status === status && styles.selectedStatusText
+                ]}>
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </Text>
+                {formData.status === status && (
+                  <MaterialIcons name="check" size={20} color="#007AFF" />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </ScrollView>
   );
 };
@@ -465,31 +539,6 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     fontWeight: '500',
   },
-  statusContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  statusOption: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    backgroundColor: 'white',
-  },
-  selectedStatus: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  statusText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  selectedStatusText: {
-    color: 'white',
-    fontWeight: '500',
-  },
   buttonContainer: {
     flexDirection: 'row',
     gap: 12,
@@ -530,5 +579,76 @@ const styles = StyleSheet.create({
   },
   disabledButtonText: {
     color: '#888',
+  },
+  dropdown: {
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 48,
+  },
+  dropdownText: {
+    fontSize: 16,
+    color: '#1a1a1a',
+  },
+  disabledText: {
+    color: '#888',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    width: '80%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1a1a1a',
+  },
+  statusOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  selectedStatus: {
+    backgroundColor: '#f0f8ff',
+    borderRadius: 12,
+  },
+  statusOptionText: {
+    fontSize: 16,
+    color: '#1a1a1a',
+  },
+  selectedStatusText: {
+    color: '#007AFF',
+    fontWeight: '500',
   },
 }); 

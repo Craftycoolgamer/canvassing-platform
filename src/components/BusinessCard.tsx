@@ -9,7 +9,9 @@ interface BusinessCardProps {
   company: Company;
   onPress: () => void;
   onAssign?: () => void;
+  onUpdateLocation?: () => void;
   showAssignButton?: boolean;
+  showUpdateLocationButton?: boolean;
 }
 
 export const BusinessCard: React.FC<BusinessCardProps> = ({
@@ -17,7 +19,9 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
   company,
   onPress,
   onAssign,
+  onUpdateLocation,
   showAssignButton = false,
+  showUpdateLocationButton = false,
 }) => {
   return (
     <TouchableOpacity style={styles.container} onPress={onPress}>
@@ -67,12 +71,16 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
           </View>
         )}
 
-        {business.notes && (
+        {business.notes && business.notes.length > 0 && (
           <View style={styles.detailRow}>
             <MaterialIcons name="note" size={16} color="#666" />
-            <Text style={styles.detailText} numberOfLines={2}>
-              {business.notes}
-            </Text>
+            <View style={styles.notesContainer}>
+              {business.notes.map((note, index) => (
+                <Text key={index} style={styles.noteText} numberOfLines={2}>
+                  {note}
+                </Text>
+              ))}
+            </View>
           </View>
         )}
       </View>
@@ -101,6 +109,21 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
               <MaterialIcons name="person-add" size={16} color="#007AFF" />
               <Text style={styles.assignButtonText}>
                 {business.assignedUserId ? 'Reassign' : 'Assign'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          
+          {showUpdateLocationButton && onUpdateLocation && (
+            <TouchableOpacity
+              style={styles.updateLocationButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                onUpdateLocation();
+              }}
+            >
+              <MaterialIcons name="location-on" size={16} color="#007AFF" />
+              <Text style={styles.updateLocationButtonText}>
+                Update Location
               </Text>
             </TouchableOpacity>
           )}
@@ -214,5 +237,32 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     marginLeft: 4,
     fontWeight: '500',
+  },
+  updateLocationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    backgroundColor: 'transparent',
+    marginLeft: 8,
+  },
+  updateLocationButtonText: {
+    fontSize: 12,
+    color: '#007AFF',
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+  notesContainer: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  noteText: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 4,
   },
 }); 

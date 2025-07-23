@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CanvassingBackend")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6046cdfa3884c39a896b40ba3ad359b6c22ecd5f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2c1166fac7053ab0f24adb94a9b61ce301347c21")]
 [assembly: System.Reflection.AssemblyProductAttribute("CanvassingBackend")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CanvassingBackend")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

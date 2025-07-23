@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\quinn\\canvassing-platform\\backend\\CanvassingBackend.csproj": {}
+    "C:\\Users\\quinn\\Desktop\\Work Projects\\canvassing-platform\\backend\\CanvassingBackend.csproj": {}
   },
   "projects": {
-    "C:\\Users\\quinn\\canvassing-platform\\backend\\CanvassingBackend.csproj": {
+    "C:\\Users\\quinn\\Desktop\\Work Projects\\canvassing-platform\\backend\\CanvassingBackend.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\quinn\\canvassing-platform\\backend\\CanvassingBackend.csproj",
+        "projectUniqueName": "C:\\Users\\quinn\\Desktop\\Work Projects\\canvassing-platform\\backend\\CanvassingBackend.csproj",
         "projectName": "CanvassingBackend",
-        "projectPath": "C:\\Users\\quinn\\canvassing-platform\\backend\\CanvassingBackend.csproj",
+        "projectPath": "C:\\Users\\quinn\\Desktop\\Work Projects\\canvassing-platform\\backend\\CanvassingBackend.csproj",
         "packagesPath": "C:\\Users\\quinn\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\quinn\\canvassing-platform\\backend\\obj\\",
+        "outputPath": "C:\\Users\\quinn\\Desktop\\Work Projects\\canvassing-platform\\backend\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -54,6 +54,10 @@
             "Microsoft.AspNetCore.Authentication.JwtBearer": {
               "target": "Package",
               "version": "[8.0.0, )"
+            },
+            "Microsoft.AspNetCore.SignalR": {
+              "target": "Package",
+              "version": "[1.1.0, )"
             },
             "Newtonsoft.Json": {
               "target": "Package",

@@ -162,9 +162,8 @@ class ApiService {
   }
 
   async assignBusinessToUser(businessId: string, userId: string): Promise<ApiResponse<Business>> {
-    return this.request<Business>(`/businesses/${businessId}/assign`, {
+    return this.request<Business>(`/businesses/${businessId}/assign?userId=${userId}`, {
       method: 'PUT',
-      body: JSON.stringify({ userId }),
     });
   }
 

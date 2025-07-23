@@ -11,6 +11,7 @@ interface MapProps {
   onMapTap?: (latitude: number, longitude: number) => void;
   userLocation?: { latitude: number; longitude: number } | null;
   onMapCenterChange?: (latitude: number, longitude: number) => void;
+  initialCenter?: { latitude: number; longitude: number };
 }
 
 const { width, height } = Dimensions.get('window');
@@ -22,6 +23,7 @@ export const Map = forwardRef<any, MapProps>(({
   onMapTap,
   userLocation,
   onMapCenterChange,
+  initialCenter,
 }, ref) => {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -92,9 +94,20 @@ export const Map = forwardRef<any, MapProps>(({
 
   // Create HTML for OpenStreetMap with clustered markers
   const createMapHTML = () => {
-    // Use user location only on first load, otherwise use default coordinates
-    const centerLat = !hasInitialized.current && location?.coords.latitude ? location.coords.latitude : 37.7749;
-    const centerLng = !hasInitialized.current && location?.coords.longitude ? location.coords.longitude : -122.4194;
+    // Use initialCenter if provided, otherwise use user location or default coordinates
+    let centerLat: number;
+    let centerLng: number;
+    
+    if (initialCenter) {
+      centerLat = initialCenter.latitude;
+      centerLng = initialCenter.longitude;
+    } else if (!hasInitialized.current && location?.coords.latitude) {
+      centerLat = location.coords.latitude;
+      centerLng = location.coords.longitude;
+    } else {
+      centerLat = 37.7749;
+      centerLng = -122.4194;
+    }
     
     // Mark as initialized after first load
     if (!hasInitialized.current) {

@@ -482,10 +482,16 @@ export const MapScreen: React.FC = () => {
                     <Text style={styles.infoText}>{getStatusText(selectedBusiness.status)}</Text>
                   </View>
 
-                  {selectedBusiness.notes && (
+                  {selectedBusiness.notes && selectedBusiness.notes.length > 0 && (
                     <View style={styles.infoRow}>
                       <MaterialIcons name="note" size={20} color="#666" />
-                      <Text style={styles.infoText}>{selectedBusiness.notes}</Text>
+                      <View style={styles.notesContainer}>
+                        {selectedBusiness.notes.map((note, index) => (
+                          <Text key={index} style={styles.noteText}>
+                            {note}
+                          </Text>
+                        ))}
+                      </View>
                     </View>
                   )}
 
@@ -762,5 +768,15 @@ const styles = StyleSheet.create({
   },
   viewOnlyButtonText: {
     color: '#666',
+  },
+  notesContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  noteText: {
+    fontSize: 16,
+    color: '#1a1a1a',
+    lineHeight: 22,
+    marginBottom: 4,
   },
 }); 

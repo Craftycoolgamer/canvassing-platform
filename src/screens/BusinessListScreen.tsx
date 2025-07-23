@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Business, Company, User } from '../types';
 import { StorageService } from '../services/storage';
@@ -20,9 +20,11 @@ import { BusinessForm } from '../components/BusinessForm';
 import { searchBusinesses, filterBusinessesByStatus } from '../utils';
 import { BusinessStatusNotesModal } from '../components/BusinessStatusNotesModal';
 import { BusinessAssignmentModal } from '../components/BusinessAssignmentModal';
+import { LocationUpdateScreen } from './LocationUpdateScreen';
 import { useAuth } from '../contexts/AuthContext';
 
 export const BusinessListScreen: React.FC = () => {
+  const navigation = useNavigation();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [filteredBusinesses, setFilteredBusinesses] = useState<Business[]>([]);
@@ -301,6 +303,13 @@ export const BusinessListScreen: React.FC = () => {
     loadData(); // Refresh the data after assignment change
   };
 
+  const handleUpdateLocation = (business: Business) => {
+    const company = getCompanyForBusiness(business);
+    if (company) {
+      (navigation as any).navigate('LocationUpdate', { business, company });
+    }
+  };
+
   const getCompanyForBusiness = (business: Business): Company | undefined => {
     return companies.find(company => company.id === business.companyId);
   };
@@ -319,7 +328,9 @@ export const BusinessListScreen: React.FC = () => {
         company={company}
         onPress={() => handleBusinessPress(item)}
         onAssign={() => handleBusinessAssignment(item)}
+        onUpdateLocation={() => handleUpdateLocation(item)}
         showAssignButton={currentUser?.role === 'Admin' || currentUser?.role === 'Manager'}
+        showUpdateLocationButton={canManagePins}
       />
     );
   };
