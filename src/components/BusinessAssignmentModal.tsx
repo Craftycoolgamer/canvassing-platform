@@ -11,8 +11,8 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Business, User, Company } from '../types';
-import { apiService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useDataManager } from '../hooks/useDataManager';
 
 interface BusinessAssignmentModalProps {
   visible: boolean;
@@ -35,6 +35,12 @@ export const BusinessAssignmentModal: React.FC<BusinessAssignmentModalProps> = (
   const [loading, setLoading] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
+  // Use the centralized data manager
+  const {
+    assignBusinessToUser,
+    unassignBusinessFromUser,
+  } = useDataManager();
+
   useEffect(() => {
     if (business) {
       setSelectedUserId(business.assignedUserId || null);
@@ -46,14 +52,10 @@ export const BusinessAssignmentModal: React.FC<BusinessAssignmentModalProps> = (
 
     setLoading(true);
     try {
-      const response = await apiService.assignBusinessToUser(business.id, selectedUserId);
-      if (response.success) {
-        Alert.alert('Success', 'Business assigned successfully');
-        onAssignmentChange();
-        onClose();
-      } else {
-        Alert.alert('Error', response.error || 'Failed to assign business');
-      }
+      await assignBusinessToUser(business.id, selectedUserId);
+      Alert.alert('Success', 'Business assigned successfully');
+      onAssignmentChange();
+      onClose();
     } catch (error) {
       Alert.alert('Error', 'Failed to assign business');
     } finally {
@@ -66,14 +68,10 @@ export const BusinessAssignmentModal: React.FC<BusinessAssignmentModalProps> = (
 
     setLoading(true);
     try {
-      const response = await apiService.unassignBusinessFromUser(business.id);
-      if (response.success) {
-        Alert.alert('Success', 'Business unassigned successfully');
-        onAssignmentChange();
-        onClose();
-      } else {
-        Alert.alert('Error', response.error || 'Failed to unassign business');
-      }
+      await unassignBusinessFromUser(business.id);
+      Alert.alert('Success', 'Business unassigned successfully');
+      onAssignmentChange();
+      onClose();
     } catch (error) {
       Alert.alert('Error', 'Failed to unassign business');
     } finally {
@@ -100,13 +98,12 @@ export const BusinessAssignmentModal: React.FC<BusinessAssignmentModalProps> = (
       return false;
     }
 
-    // Then apply role-based filtering
-    if (currentUser?.role === 'Admin') {
-      return user.role === 'User' || user.role === 'Manager';
-    } else if (currentUser?.role === 'Manager') {
-      return user.role === 'User' && user.companyId === currentUser.companyId;
+    // Only show active users
+    if (!user.isActive) {
+      return false;
     }
-    return false;
+
+    return true;
   });
 
   return (

@@ -13,34 +13,28 @@ import { UserSelector } from '../components/UserSelector';
 import { ManagerSelector } from '../components/ManagerSelector';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
-import { apiService } from '../services/api';
 import { Company } from '../types';
+import { useDataManager } from '../hooks/useDataManager';
 
 export const SettingsScreen: React.FC = () => {
   const [showCompanySelector, setShowCompanySelector] = useState(false);
   const [showUserSelector, setShowUserSelector] = useState(false);
   const [showManagerSelector, setShowManagerSelector] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
-  const [userCompany, setUserCompany] = useState<Company | null>(null);
   const { user, logout } = useAuth();
 
-  const loadUserCompany = async () => {
-    if (user?.companyId) {
-      try {
-        const companiesResponse = await apiService.getCompanies();
-        if (companiesResponse.success && companiesResponse.data) {
-          const company = companiesResponse.data.find(c => c.id === user.companyId);
-          setUserCompany(company || null);
-        }
-      } catch (error) {
-        console.error('Error loading user company:', error);
-      }
-    }
-  };
+  // Use the centralized data manager
+  const {
+    companies,
+    syncAllData,
+  } = useDataManager();
+
+  // Get user's company from the centralized data
+  const userCompany = user?.companyId ? companies.find(c => c.id === user.companyId) || null : null;
 
   useEffect(() => {
-    loadUserCompany();
-  }, [user?.companyId]);
+    syncAllData();
+  }, []);
 
   const handleCompanyChange = () => {
     console.log('Company selection changed, other screens will refresh on focus');

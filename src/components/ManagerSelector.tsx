@@ -10,11 +10,9 @@ import {
   TextInput,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, UserFormData, Company } from '../types';
-import { apiService } from '../services/api';
-import { StorageService } from '../services/storage';
 import { useAuth } from '../contexts/AuthContext';
+import { useDataManager } from '../hooks/useDataManager';
 
 interface ManagerSelectorProps {
   onManagerSelect?: (user: User) => void;
@@ -25,9 +23,21 @@ export const ManagerSelector: React.FC<ManagerSelectorProps> = ({
   onManagerSelect,
   onManagerChange,
 }) => {
-  const [managers, setManagers] = useState<User[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedManager, setSelectedManager] = useState<User | null>(null);
+  const { user: currentUser } = useAuth();
+  
+  // Use the centralized data manager
+  const {
+    users,
+    companies,
+    selectedManager,
+    setSelectedManager,
+    createUser,
+    updateUser,
+    deleteUser,
+    syncAllData,
+  } = useDataManager();
+
+  // Local state for UI
   const [showFormModal, setShowFormModal] = useState(false);
   const [showCompanyPicker, setShowCompanyPicker] = useState(false);
   const [editingManager, setEditingManager] = useState<User | null>(null);
@@ -43,98 +53,31 @@ export const ManagerSelector: React.FC<ManagerSelectorProps> = ({
     canManagePins: false,
   });
   const [showPassword, setShowPassword] = useState(false);
-  const { user: currentUser } = useAuth();
+
+  // Filter to show only managers
+  const managersOnly = users.filter(user => user.role === 'Manager');
 
   useEffect(() => {
-    loadManagers();
-    loadCompanies();
+    syncAllData();
   }, []);
-
-  const loadManagers = async () => {
-    try {
-      console.log('Loading managers from API...');
-      const response = await apiService.getUsers();
-      
-      if (response.success && response.data) {
-        const managersOnly = response.data.filter(user => user.role === 'Manager');
-        setManagers(managersOnly);
-        console.log('Loaded managers from API:', managersOnly.length);
-        await loadSelectedManager(managersOnly);
-      } else {
-        console.log('API failed, loading from local storage');
-        const usersData = await StorageService.getUsers();
-        const managersOnly = usersData.filter(user => user.role === 'Manager');
-        setManagers(managersOnly);
-        await loadSelectedManager(managersOnly);
-      }
-    } catch (error) {
-      console.error('Error loading managers:', error);
-      try {
-        const usersData = await StorageService.getUsers();
-        const managersOnly = usersData.filter(user => user.role === 'Manager');
-        setManagers(managersOnly);
-        await loadSelectedManager(managersOnly);
-      } catch (fallbackError) {
-        console.error('Fallback error:', fallbackError);
-        Alert.alert('Error', 'Failed to load managers');
-      }
-    }
-  };
-
-  const loadCompanies = async () => {
-    try {
-      const response = await apiService.getCompanies();
-      if (response.success && response.data) {
-        setCompanies(response.data);
-      }
-    } catch (error) {
-      console.error('Error loading companies:', error);
-    }
-  };
-
-  const loadSelectedManager = async (managersList: User[] = managers) => {
-    try {
-      const selectedManagerId = await AsyncStorage.getItem('selectedManagerId');
-      if (selectedManagerId) {
-        const manager = managersList.find(m => m.id === selectedManagerId);
-        setSelectedManager(manager || null);
-        console.log('Selected manager:', manager?.firstName);
-      }
-    } catch (error) {
-      console.error('Error loading selected manager:', error);
-    }
-  };
 
   const handleManagerSelect = async (manager: User) => {
     try {
-      await AsyncStorage.setItem('selectedManagerId', manager.id);
-      setSelectedManager(manager);
-      console.log('Selected manager:', manager.firstName);
-      
-      if (onManagerSelect) {
-        onManagerSelect(manager);
-      }
-      
-      if (onManagerChange) {
-        onManagerChange();
-      }
+      await setSelectedManager(manager);
+      onManagerSelect?.(manager);
+      onManagerChange?.();
     } catch (error) {
-      console.error('Error saving selected manager:', error);
-      Alert.alert('Error', 'Failed to save selected manager');
+      console.error('Error selecting manager:', error);
+      Alert.alert('Error', 'Failed to select manager');
     }
   };
 
   const handleClearSelection = async () => {
     try {
-      await AsyncStorage.removeItem('selectedManagerId');
-      setSelectedManager(null);
-      console.log('Cleared manager selection');
-      
-      if (onManagerChange) {
-        onManagerChange();
-      }
+      await setSelectedManager(null);
+      onManagerChange?.();
     } catch (error) {
-      console.error('Error clearing selected manager:', error);
+      console.error('Error clearing manager selection:', error);
       Alert.alert('Error', 'Failed to clear selection');
     }
   };
@@ -147,8 +90,8 @@ export const ManagerSelector: React.FC<ManagerSelectorProps> = ({
       firstName: manager.firstName,
       lastName: manager.lastName,
       password: '',
-      role: 'Manager',
-      companyId: manager.companyId || '',
+      role: manager.role,
+      companyId: manager.companyId,
       isActive: manager.isActive,
       canManagePins: manager.canManagePins,
     });
@@ -158,7 +101,7 @@ export const ManagerSelector: React.FC<ManagerSelectorProps> = ({
   const handleDeleteManager = (manager: User) => {
     Alert.alert(
       'Delete Manager',
-      `Are you sure you want to delete ${manager.firstName} ${manager.lastName}?`,
+      `Are you sure you want to delete "${manager.firstName} ${manager.lastName}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -166,13 +109,9 @@ export const ManagerSelector: React.FC<ManagerSelectorProps> = ({
           style: 'destructive',
           onPress: async () => {
             try {
-              const response = await apiService.deleteUser(manager.id);
-              if (response.success) {
-                console.log('Manager deleted successfully');
-                await loadManagers();
-              } else {
-                console.error('API error:', response.error);
-                Alert.alert('Error', response.error || 'Failed to delete manager');
+              await deleteUser(manager.id);
+              if (selectedManager?.id === manager.id) {
+                await handleClearSelection();
               }
             } catch (error) {
               console.error('Error deleting manager:', error);
@@ -185,65 +124,63 @@ export const ManagerSelector: React.FC<ManagerSelectorProps> = ({
   };
 
   const validateForm = (): boolean => {
-    if (!formData.email.trim()) {
-      Alert.alert('Error', 'Email is required');
+    if (!formData.email.trim() || !formData.username.trim() || 
+        !formData.firstName.trim() || !formData.lastName.trim()) {
+      Alert.alert('Error', 'Please fill in all required fields');
       return false;
     }
-    if (!formData.username.trim()) {
-      Alert.alert('Error', 'Username is required');
-      return false;
-    }
-    if (!formData.firstName.trim()) {
-      Alert.alert('Error', 'First name is required');
-      return false;
-    }
-    if (!formData.lastName.trim()) {
-      Alert.alert('Error', 'Last name is required');
-      return false;
-    }
+
     if (!editingManager && !formData.password) {
       Alert.alert('Error', 'Password is required for new managers');
       return false;
     }
+
+    if (formData.password && formData.password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters long');
+      return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return false;
+    }
+
     return true;
   };
 
   const handleSubmit = async () => {
-    if (validateForm()) {
-      try {
-        console.log('Saving manager to API...');
-        
-        let response;
-        if (editingManager) {
-          response = await apiService.updateUser(editingManager.id, formData);
-        } else {
-          response = await apiService.createUser(formData);
-        }
+    if (!validateForm()) return;
 
-        if (response.success) {
-          console.log('Manager saved successfully');
-          await loadManagers();
-          setShowFormModal(false);
-          setEditingManager(null);
-          setFormData({ 
-            email: '', 
-            username: '', 
-            firstName: '', 
-            lastName: '', 
-            password: '', 
-            role: 'Manager', 
-            companyId: '', 
-            isActive: true, 
-            canManagePins: false,
-          });
-        } else {
-          console.error('API error:', response.error);
-          Alert.alert('Error', response.error || 'Failed to save manager');
+    try {
+      if (editingManager) {
+        // Update existing manager
+        const updateData = { ...formData };
+        if (!formData.password) {
+          delete updateData.password;
         }
-      } catch (error) {
-        console.error('Error saving manager:', error);
-        Alert.alert('Error', 'Failed to save manager');
+        await updateUser(editingManager.id, updateData);
+      } else {
+        // Create new manager
+        await createUser(formData);
       }
+
+      setShowFormModal(false);
+      setEditingManager(null);
+      setFormData({
+        email: '',
+        username: '',
+        firstName: '',
+        lastName: '',
+        password: '',
+        role: 'Manager',
+        companyId: '',
+        isActive: true,
+        canManagePins: false,
+      });
+    } catch (error) {
+      console.error('Error saving manager:', error);
+      Alert.alert('Error', 'Failed to save manager');
     }
   };
 
@@ -257,14 +194,17 @@ export const ManagerSelector: React.FC<ManagerSelectorProps> = ({
   };
 
   const getAvailableRoles = () => {
-    // Only Admin can assign Manager role
     if (currentUser?.role === 'Admin') {
-      return ['User', 'Manager', 'Admin'];
+      return ['Manager'];
     }
-    return ['User', 'Manager'];
+    return [];
   };
 
-  if (managers.length === 0) {
+  const getTitle = () => {
+    return 'Manager Management';
+  };
+
+  if (managersOnly.length === 0) {
     return (
       <View style={styles.emptyState}>
         <MaterialIcons name="supervisor-account" size={64} color="#ccc" />
@@ -303,7 +243,7 @@ export const ManagerSelector: React.FC<ManagerSelectorProps> = ({
       </View>
 
       <ScrollView style={styles.managersList} showsVerticalScrollIndicator={false}>
-        {managers.map((manager) => (
+        {managersOnly.map((manager) => (
           <View key={manager.id} style={[
             styles.managerItem,
             selectedManager?.id === manager.id && styles.selectedManagerItem
@@ -473,7 +413,7 @@ export const ManagerSelector: React.FC<ManagerSelectorProps> = ({
                       styles.roleOption,
                       formData.role === role && styles.selectedRole,
                     ]}
-                    onPress={() => updateField('role', role as 'Admin' | 'Manager' | 'User')}
+                    onPress={() => updateField('role', role as 'Manager')}
                   >
                     <Text style={[
                       styles.roleText,

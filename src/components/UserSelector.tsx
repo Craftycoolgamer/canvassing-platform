@@ -10,11 +10,9 @@ import {
   TextInput,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, UserFormData, Company } from '../types';
-import { apiService } from '../services/api';
-import { StorageService } from '../services/storage';
 import { useAuth } from '../contexts/AuthContext';
+import { useDataManager } from '../hooks/useDataManager';
 
 interface UserSelectorProps {
   onUserSelect?: (user: User) => void;
@@ -25,9 +23,21 @@ export const UserSelector: React.FC<UserSelectorProps> = ({
   onUserSelect,
   onUserChange,
 }) => {
-  const [users, setUsers] = useState<User[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const { user: currentUser } = useAuth();
+  
+  // Use the centralized data manager
+  const {
+    users,
+    companies,
+    selectedUser,
+    setSelectedUser,
+    createUser,
+    updateUser,
+    deleteUser,
+    syncAllData,
+  } = useDataManager();
+
+  // Local state for UI
   const [showFormModal, setShowFormModal] = useState(false);
   const [showCompanyPicker, setShowCompanyPicker] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -43,99 +53,32 @@ export const UserSelector: React.FC<UserSelectorProps> = ({
     isActive: true,
     canManagePins: false,
   });
-  const { user: currentUser } = useAuth();
+
+  // Filter to show only regular users (not managers or admins)
+  const regularUsers = users.filter(user => user.role === 'User');
 
   useEffect(() => {
-    loadUsers();
-    loadCompanies();
+    syncAllData();
   }, []);
-
-  const loadUsers = async () => {
-    try {
-      console.log('Loading users from API...');
-      const response = await apiService.getUsers();
-      
-      if (response.success && response.data) {
-        // Filter to show only regular users (not managers or admins)
-        const regularUsers = response.data.filter(user => user.role === 'User');
-        setUsers(regularUsers);
-        console.log('Loaded users from API:', regularUsers.length);
-        await loadSelectedUser(regularUsers);
-      } else {
-        console.log('API failed, loading from local storage');
-        const usersData = await StorageService.getUsers();
-        const regularUsers = usersData.filter(user => user.role === 'User');
-        setUsers(regularUsers);
-        await loadSelectedUser(regularUsers);
-      }
-    } catch (error) {
-      console.error('Error loading users:', error);
-      try {
-        const usersData = await StorageService.getUsers();
-        const regularUsers = usersData.filter(user => user.role === 'User');
-        setUsers(regularUsers);
-        await loadSelectedUser(regularUsers);
-      } catch (fallbackError) {
-        console.error('Fallback error:', fallbackError);
-        Alert.alert('Error', 'Failed to load users');
-      }
-    }
-  };
-
-  const loadCompanies = async () => {
-    try {
-      const response = await apiService.getCompanies();
-      if (response.success && response.data) {
-        setCompanies(response.data);
-      }
-    } catch (error) {
-      console.error('Error loading companies:', error);
-    }
-  };
-
-  const loadSelectedUser = async (usersList: User[] = users) => {
-    try {
-      const selectedUserId = await AsyncStorage.getItem('selectedUserId');
-      if (selectedUserId) {
-        const user = usersList.find(u => u.id === selectedUserId);
-        setSelectedUser(user || null);
-        console.log('Selected user:', user?.firstName);
-      }
-    } catch (error) {
-      console.error('Error loading selected user:', error);
-    }
-  };
 
   const handleUserSelect = async (user: User) => {
     try {
-      await AsyncStorage.setItem('selectedUserId', user.id);
+      await setSelectedUser(user);
       setSelectedUser(user);
-      console.log('Selected user:', user.firstName);
-      
-      if (onUserSelect) {
-        onUserSelect(user);
-      }
-      
-      if (onUserChange) {
-        onUserChange();
-      }
+      onUserSelect?.(user);
+      onUserChange?.();
     } catch (error) {
-      console.error('Error saving selected user:', error);
-      Alert.alert('Error', 'Failed to save selected user');
+      console.error('Error selecting user:', error);
+      Alert.alert('Error', 'Failed to select user');
     }
   };
 
   const handleClearSelection = async () => {
     try {
-      await AsyncStorage.removeItem('selectedUserId');
-      setSelectedUser(null);
-      console.log('Cleared user selection');
-      
-      if (onUserChange) {
-        onUserChange();
-      }
+      await setSelectedUser(null);
+      onUserChange?.();
     } catch (error) {
-      console.error('Error clearing selected user:', error);
+      console.error('Error clearing user selection:', error);
       Alert.alert('Error', 'Failed to clear selection');
     }
   };
@@ -149,7 +92,7 @@ export const UserSelector: React.FC<UserSelectorProps> = ({
       lastName: user.lastName,
       password: '',
       role: user.role,
-      companyId: user.companyId || '',
+      companyId: user.companyId,
       isActive: user.isActive,
       canManagePins: user.canManagePins,
     });
@@ -159,7 +102,7 @@ export const UserSelector: React.FC<UserSelectorProps> = ({
   const handleDeleteUser = (user: User) => {
     Alert.alert(
       'Delete User',
-      `Are you sure you want to delete ${user.firstName} ${user.lastName}?`,
+      `Are you sure you want to delete "${user.firstName} ${user.lastName}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -167,13 +110,9 @@ export const UserSelector: React.FC<UserSelectorProps> = ({
           style: 'destructive',
           onPress: async () => {
             try {
-              const response = await apiService.deleteUser(user.id);
-              if (response.success) {
-                console.log('User deleted successfully');
-                await loadUsers();
-              } else {
-                console.error('API error:', response.error);
-                Alert.alert('Error', response.error || 'Failed to delete user');
+              await deleteUser(user.id);
+              if (selectedUser?.id === user.id) {
+                await handleClearSelection();
               }
             } catch (error) {
               console.error('Error deleting user:', error);
@@ -186,70 +125,63 @@ export const UserSelector: React.FC<UserSelectorProps> = ({
   };
 
   const validateForm = (): boolean => {
-    if (!formData.email.trim()) {
-      Alert.alert('Error', 'Email is required');
+    if (!formData.email.trim() || !formData.username.trim() || 
+        !formData.firstName.trim() || !formData.lastName.trim()) {
+      Alert.alert('Error', 'Please fill in all required fields');
       return false;
     }
-    if (!formData.username.trim()) {
-      Alert.alert('Error', 'Username is required');
-      return false;
-    }
-    if (!formData.firstName.trim()) {
-      Alert.alert('Error', 'First name is required');
-      return false;
-    }
-    if (!formData.lastName.trim()) {
-      Alert.alert('Error', 'Last name is required');
-      return false;
-    }
+
     if (!editingUser && !formData.password) {
       Alert.alert('Error', 'Password is required for new users');
       return false;
     }
-    // Require company for non-admin users
-    if (formData.role !== 'Admin' && !formData.companyId) {
-      Alert.alert('Error', 'Company is required for non-admin users');
+
+    if (formData.password && formData.password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters long');
       return false;
     }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return false;
+    }
+
     return true;
   };
 
   const handleSubmit = async () => {
-    if (validateForm()) {
-      try {
-        console.log('Saving user to API...');
-        
-        let response;
-        if (editingUser) {
-          response = await apiService.updateUser(editingUser.id, formData);
-        } else {
-          response = await apiService.createUser(formData);
-        }
+    if (!validateForm()) return;
 
-        if (response.success) {
-          console.log('User saved successfully');
-          await loadUsers();
-          setShowFormModal(false);
-          setEditingUser(null);
-          setFormData({ 
-            email: '', 
-            username: '', 
-            firstName: '', 
-            lastName: '', 
-            password: '', 
-            role: 'User', 
-            companyId: '', 
-            isActive: true,
-            canManagePins: false,
-          });
-        } else {
-          console.error('API error:', response.error);
-          Alert.alert('Error', response.error || 'Failed to save user');
+    try {
+      if (editingUser) {
+        // Update existing user
+        const updateData = { ...formData };
+        if (!formData.password) {
+          delete updateData.password;
         }
-      } catch (error) {
-        console.error('Error saving user:', error);
-        Alert.alert('Error', 'Failed to save user');
+        await updateUser(editingUser.id, updateData);
+      } else {
+        // Create new user
+        await createUser(formData);
       }
+
+      setShowFormModal(false);
+      setEditingUser(null);
+      setFormData({
+        email: '',
+        username: '',
+        firstName: '',
+        lastName: '',
+        password: '',
+        role: 'User',
+        companyId: '',
+        isActive: true,
+        canManagePins: false,
+      });
+    } catch (error) {
+      console.error('Error saving user:', error);
+      Alert.alert('Error', 'Failed to save user');
     }
   };
 
@@ -263,20 +195,17 @@ export const UserSelector: React.FC<UserSelectorProps> = ({
   };
 
   const getAvailableRoles = () => {
-    // Admin can assign any role, Manager can only assign User role
     if (currentUser?.role === 'Admin') {
-      return ['User', 'Manager', 'Admin'];
-    } else if (currentUser?.role === 'Manager') {
       return ['User', 'Manager'];
     }
     return ['User'];
   };
 
   const getTitle = () => {
-    return 'Users';
+    return 'User Management';
   };
 
-  if (users.length === 0) {
+  if (regularUsers.length === 0) {
     return (
       <View style={styles.emptyState}>
         <MaterialIcons name="person" size={64} color="#ccc" />
@@ -315,7 +244,7 @@ export const UserSelector: React.FC<UserSelectorProps> = ({
       </View>
 
       <ScrollView style={styles.usersList} showsVerticalScrollIndicator={false}>
-        {users.map((user) => (
+        {regularUsers.map((user) => (
           <View key={user.id} style={[
             styles.userItem,
             selectedUser?.id === user.id && styles.selectedUserItem

@@ -10,11 +10,8 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { Business, Company, User } from '../types';
-import { StorageService } from '../services/storage';
-import { apiService } from '../services/api';
 import { getStatusColor, getStatusText, formatDate } from '../utils';
 import { BusinessForm } from '../components/BusinessForm';
 import { Map } from '../components/Map';
@@ -22,12 +19,26 @@ import { BusinessList } from '../components/BusinessList';
 import { useAuth } from '../contexts/AuthContext';
 import { BusinessStatusNotesModal } from '../components/BusinessStatusNotesModal';
 import { BusinessAssignmentModal } from '../components/BusinessAssignmentModal';
+import { useDataManager } from '../hooks/useDataManager';
 
 export const MapScreen: React.FC = () => {
-  const [businesses, setBusinesses] = useState<Business[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
+  const { user: currentUser } = useAuth();
+  const canManagePins = currentUser?.canManagePins || false;
+
+  // Use the centralized data manager
+  const {
+    businesses,
+    companies,
+    users,
+    selectedCompany,
+    createBusiness,
+    updateBusiness,
+    deleteBusiness,
+    syncAllData,
+  } = useDataManager();
+
+  // Local state for UI
   const [filteredBusinesses, setFilteredBusinesses] = useState<Business[]>([]);
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [showBusinessModal, setShowBusinessModal] = useState(false);
@@ -36,17 +47,12 @@ export const MapScreen: React.FC = () => {
   const [selectedCoordinates, setSelectedCoordinates] = useState<{latitude: number, longitude: number} | null>(null);
   const [mapCenter, setMapCenter] = useState<{latitude: number, longitude: number}>({ latitude: 37.7749, longitude: -122.4194 });
   const mapRef = useRef<any>(null);
-  const { user: currentUser } = useAuth();
   const [showStatusNotesModal, setShowStatusNotesModal] = useState(false);
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [assignmentBusiness, setAssignmentBusiness] = useState<Business | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-
-  // Check if user can manage pins
-  const canManagePins = currentUser?.canManagePins || false;
 
   useEffect(() => {
-    loadData();
+    syncAllData();
     requestLocationPermission();
   }, []);
 
@@ -54,125 +60,25 @@ export const MapScreen: React.FC = () => {
   useFocusEffect(
     React.useCallback(() => {
       console.log('MapScreen focused - refreshing data...');
-      loadData();
-    }, [])
+      syncAllData();
+    }, [syncAllData])
   );
 
-  const loadData = async () => {
-    try {
-      console.log('Loading data from API...');
-      
-      // Load companies first
-      const companiesResponse = await apiService.getCompanies();
-      let companiesData: Company[] = [];
-
-      if (companiesResponse.success && companiesResponse.data) {
-        companiesData = companiesResponse.data;
-        console.log('Loaded companies from API:', companiesData.length);
-      } else {
-        console.log('API failed, loading from local storage');
-        companiesData = await StorageService.getCompanies();
-      }
-
-      setCompanies(companiesData);
-
-      // Load users for business assignment
-      const usersResponse = await apiService.getUsers();
-      if (usersResponse.success && usersResponse.data) {
-        setUsers(usersResponse.data);
-        console.log('Loaded users from API:', usersResponse.data.length);
-      }
-
-      let businessesData: Business[] = [];
-      
-      // Check if user can manage pins
-      if (!canManagePins && currentUser) {
-        // User cannot manage pins - load only assigned businesses
-        console.log('User cannot manage pins, loading assigned businesses for user:', currentUser.id);
-        const businessesResponse = await apiService.getBusinessesByAssignedUser(currentUser.id);
-        
-        if (businessesResponse.success && businessesResponse.data) {
-          businessesData = businessesResponse.data;
-          console.log('Loaded assigned businesses from API:', businessesData.length);
-        } else {
-          console.log('API failed, loading from local storage');
-          businessesData = await StorageService.getBusinessesByAssignedUser(currentUser.id);
-        }
-      } else {
-        // User can manage pins - load based on company selection
-        const selectedCompanyId = await AsyncStorage.getItem('selectedCompanyId');
-        
-        if (selectedCompanyId) {
-          // Load businesses for the selected company
-          console.log('Loading businesses for selected company:', selectedCompanyId);
-          const businessesResponse = await apiService.getBusinessesByCompany(selectedCompanyId);
-          
-          if (businessesResponse.success && businessesResponse.data) {
-            businessesData = businessesResponse.data;
-            console.log('Loaded businesses for company from API:', businessesData.length);
-          } else {
-            console.log('API failed, loading from local storage');
-            businessesData = await StorageService.getBusinessesByCompany(selectedCompanyId);
-          }
-        } else {
-          // Load all businesses if no company is selected
-          console.log('No company selected, loading all businesses');
-          const businessesResponse = await apiService.getBusinesses();
-          
-          if (businessesResponse.success && businessesResponse.data) {
-            businessesData = businessesResponse.data;
-            console.log('Loaded all businesses from API:', businessesData.length);
-          } else {
-            console.log('API failed, loading from local storage');
-            businessesData = await StorageService.getBusinesses();
-          }
-        }
-      }
-
-      console.log('Final loaded businesses:', businessesData.length);
-      console.log('Final loaded companies:', companiesData.length);
-      
-      setBusinesses(businessesData);
-    } catch (error) {
-      console.error('Error loading data:', error);
-      // Fallback to local storage
-      try {
-        const [businessesData, companiesData] = await Promise.all([
-          StorageService.getBusinesses(),
-          StorageService.getCompanies(),
-        ]);
-        setBusinesses(businessesData);
-        setCompanies(companiesData);
-      } catch (fallbackError) {
-        console.error('Fallback error:', fallbackError);
-        Alert.alert('Error', 'Failed to load data');
-      }
-    }
-  };
-
-  const loadSelectedCompany = async () => {
-    try {
-      const selectedCompanyId = await AsyncStorage.getItem('selectedCompanyId');
-      if (selectedCompanyId) {
-        const company = companies.find(c => c.id === selectedCompanyId);
-        setSelectedCompany(company || null);
-        console.log('Selected company for filtering:', company?.name || 'Not found');
-      } else {
-        setSelectedCompany(null);
-        console.log('No company selected - showing all businesses');
-      }
-    } catch (error) {
-      console.error('Error loading selected company:', error);
-      setSelectedCompany(null);
-    }
-  };
-
-  // Load selected company when companies are loaded
+  // Filter businesses based on selected company and user permissions
   useEffect(() => {
-    if (companies.length > 0) {
-      loadSelectedCompany();
+    let filtered = businesses;
+
+    // Apply company filter if user can manage pins and a company is selected
+    if (canManagePins && selectedCompany) {
+      filtered = filtered.filter(business => business.companyId === selectedCompany.id);
+    } else if (!canManagePins && currentUser) {
+      // For users without pin permissions, only show assigned businesses
+      filtered = filtered.filter(business => business.assignedUserId === currentUser.id);
     }
-  }, [companies]);
+
+    setFilteredBusinesses(filtered);
+    console.log('Businesses filtered:', filtered.length);
+  }, [businesses, selectedCompany, canManagePins, currentUser]);
 
   // Calculate distance between two coordinates using Haversine formula
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -196,19 +102,13 @@ export const MapScreen: React.FC = () => {
     });
   };
 
-  // Filter businesses based on selected company
-  useEffect(() => {
-    // Sort by distance from map center
-    const sortedBusinesses = sortBusinessesByDistance(businesses, mapCenter.latitude, mapCenter.longitude);
-    setFilteredBusinesses(sortedBusinesses);
-  }, [businesses, mapCenter]);
-
   const requestLocationPermission = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
         const location = await Location.getCurrentPositionAsync({});
         setUserLocation(location);
+        setMapCenter({ latitude: location.coords.latitude, longitude: location.coords.longitude });
       }
     } catch (error) {
       console.error('Error getting location:', error);
@@ -216,72 +116,60 @@ export const MapScreen: React.FC = () => {
   };
 
   const handleMarkerPress = (business: Business) => {
-    setSelectedBusiness(business);
-    if (canManagePins) {
-      setShowBusinessModal(true);
-    } else {
-      setShowStatusNotesModal(true);
+    // Center the map on the selected business
+    if (mapRef.current) {
+      mapRef.current.zoomToLocation(business.latitude, business.longitude);
     }
+    
+    setSelectedBusiness(business);
+    setShowBusinessModal(true);
   };
 
   const handleBusinessPress = (business: Business) => {
-    setSelectedBusiness(business);
-    if (canManagePins) {
-      setShowBusinessModal(true);
-    } else {
-      setShowStatusNotesModal(true);
-    }
-    if (mapRef.current && canManagePins) {
+    // Center the map on the selected business
+    if (mapRef.current) {
       mapRef.current.zoomToLocation(business.latitude, business.longitude);
+    }
+    
+    if (canManagePins) {
+      setEditingBusiness(business);
+      setShowFormModal(true);
+    } else {
+      setSelectedBusiness(business);
+      setShowStatusNotesModal(true);
     }
   };
 
   const handleMapTap = (latitude: number, longitude: number) => {
-    if (!canManagePins) {
-      // Alert.alert(
-      //   'Permission Denied',
-      //   'You do not have permission to add business pins. Please contact your administrator.',
-      //   [{ text: 'OK' }]
-      // );
-      return;
+    if (canManagePins) {
+      setSelectedCoordinates({ latitude, longitude });
+      setEditingBusiness(null);
+      setShowFormModal(true);
     }
-    
-    console.log('Map tapped at:', latitude, longitude);
-    setSelectedCoordinates({ latitude, longitude });
-    setEditingBusiness(null);
-    setShowFormModal(true);
   };
 
   const handleMapCenterChange = (latitude: number, longitude: number) => {
-    console.log('Map center changed to:', latitude, longitude);
     setMapCenter({ latitude, longitude });
   };
 
   const handleEditBusiness = (business: Business) => {
-    if (!canManagePins) {
-      // Alert.alert(
-      //   'Permission Denied',
-      //   'You do not have permission to edit business pins. Please contact your administrator.',
-      //   [{ text: 'OK' }]
-      // );
-      return;
+    if (canManagePins) {
+      // Center the map on the business being edited
+      if (mapRef.current) {
+        mapRef.current.zoomToLocation(business.latitude, business.longitude);
+      }
+      
+      // Close the business details modal first
+      setShowBusinessModal(false);
+      setSelectedBusiness(null);
+      
+      // Then open the edit form modal
+      setEditingBusiness(business);
+      setShowFormModal(true);
     }
-
-    setEditingBusiness(business);
-    setShowBusinessModal(false);
-    setShowFormModal(true);
   };
 
   const handleDeleteBusiness = (business: Business) => {
-    if (!canManagePins) {
-      // Alert.alert(
-      //   'Permission Denied',
-      //   'You do not have permission to delete business pins. Please contact your administrator.',
-      //   [{ text: 'OK' }]
-      // );
-      return;
-    }
-
     Alert.alert(
       'Delete Business',
       `Are you sure you want to delete "${business.name}"?`,
@@ -292,18 +180,13 @@ export const MapScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              console.log('Deleting business from API...');
-              const response = await apiService.deleteBusiness(business.id);
+              console.log('Deleting business...');
+              await deleteBusiness(business.id);
+              console.log('Business deleted successfully');
               
-              if (response.success) {
-                console.log('Business deleted successfully');
-                await loadData();
-                setShowBusinessModal(false);
-                setSelectedBusiness(null);
-              } else {
-                console.error('API error:', response.error);
-                Alert.alert('Error', response.error || 'Failed to delete business');
-              }
+              // Close the business details modal after successful deletion
+              setShowBusinessModal(false);
+              setSelectedBusiness(null);
             } catch (error) {
               console.error('Error deleting business:', error);
               Alert.alert('Error', 'Failed to delete business');
@@ -316,32 +199,25 @@ export const MapScreen: React.FC = () => {
 
   const handleFormSubmit = async (formData: any) => {
     try {
-      console.log('Saving business to API...');
+      console.log('Saving business...');
       
-      // If we have selected coordinates, use them
-      const businessData = selectedCoordinates 
-        ? { ...formData, latitude: selectedCoordinates.latitude, longitude: selectedCoordinates.longitude }
-        : formData;
-      
-      let response;
       if (editingBusiness) {
         // Update existing business
-        response = await apiService.updateBusiness(editingBusiness.id, businessData);
+        await updateBusiness(editingBusiness.id, formData);
       } else {
-        // Create new business
-        response = await apiService.createBusiness(businessData);
+        // Create new business with selected coordinates
+        const businessData = {
+          ...formData,
+          latitude: selectedCoordinates?.latitude || mapCenter.latitude,
+          longitude: selectedCoordinates?.longitude || mapCenter.longitude,
+        };
+        await createBusiness(businessData);
       }
 
-      if (response.success) {
-        console.log('Business saved successfully');
-        await loadData();
-        setShowFormModal(false);
-        setEditingBusiness(null);
-        setSelectedCoordinates(null);
-      } else {
-        console.error('API error:', response.error);
-        Alert.alert('Error', response.error || 'Failed to save business');
-      }
+      console.log('Business saved successfully');
+      setShowFormModal(false);
+      setEditingBusiness(null);
+      setSelectedCoordinates(null);
     } catch (error) {
       console.error('Error saving business:', error);
       Alert.alert('Error', 'Failed to save business');
@@ -358,29 +234,34 @@ export const MapScreen: React.FC = () => {
         notes,
       };
       
-      const response = await apiService.updateBusiness(selectedBusiness.id, updatedBusiness);
-      if (response.success) {
-        await loadData();
-        setShowStatusNotesModal(false);
-        setSelectedBusiness(null);
-      } else {
-        Alert.alert('Error', response.error || 'Failed to update business');
-      }
+      await updateBusiness(selectedBusiness.id, updatedBusiness);
+      setShowStatusNotesModal(false);
+      setSelectedBusiness(null);
     } catch (error) {
       Alert.alert('Error', 'Failed to update business');
     }
   };
 
   const handleBusinessAssignment = (business: Business) => {
+    // Center the map on the business being assigned
+    if (mapRef.current) {
+      mapRef.current.zoomToLocation(business.latitude, business.longitude);
+    }
+    
+    // Close the business details modal first
+    setShowBusinessModal(false);
+    setSelectedBusiness(null);
+    
+    // Then open the assignment modal
     setAssignmentBusiness(business);
     setShowAssignmentModal(true);
   };
 
   const handleAssignmentChange = () => {
-    loadData(); // Refresh the data after assignment change
+    syncAllData(); // Refresh the data after assignment change
   };
 
-  const getCompanyForBusiness = (business: Business): Company | undefined => {
+  const getCompanyForBusiness = (business: Business) => {
     return companies.find(company => company.id === business.companyId);
   };
 

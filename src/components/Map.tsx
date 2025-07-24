@@ -35,10 +35,22 @@ export const Map = forwardRef<any, MapProps>(({
   // Expose zoomToLocation method to parent component
   useImperativeHandle(ref, () => ({
     zoomToLocation: (latitude: number, longitude: number) => {
-      const zoomScript = `
-        map.setView([${latitude}, ${longitude}], 16);
-      `;
-      webViewRef.current?.injectJavaScript(zoomScript);
+      if (webViewRef.current && mapReady) {
+        const zoomScript = `
+          map.setView([${latitude}, ${longitude}], 16);
+        `;
+        webViewRef.current.injectJavaScript(zoomScript);
+      } else {
+        // If map is not ready, wait a bit and try again
+        setTimeout(() => {
+          if (webViewRef.current && mapReady) {
+            const zoomScript = `
+              map.setView([${latitude}, ${longitude}], 16);
+            `;
+            webViewRef.current.injectJavaScript(zoomScript);
+          }
+        }, 500);
+      }
     }
   }));
 
@@ -377,14 +389,6 @@ export const Map = forwardRef<any, MapProps>(({
     } else {
       console.log('WebView ref not ready');
     }
-  };
-
-  // Function to zoom to a specific location
-  const zoomToLocation = (latitude: number, longitude: number) => {
-    const zoomScript = `
-      map.setView([${latitude}, ${longitude}], 16);
-    `;
-    webViewRef.current?.injectJavaScript(zoomScript);
   };
 
   // If no businesses, show a message

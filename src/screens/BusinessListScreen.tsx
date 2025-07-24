@@ -11,10 +11,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Business, Company, User } from '../types';
-import { StorageService } from '../services/storage';
-import { apiService } from '../services/api';
+import { Business } from '../types';
 import { BusinessCard } from '../components/BusinessCard';
 import { BusinessForm } from '../components/BusinessForm';
 import { searchBusinesses, filterBusinessesByStatus } from '../utils';
@@ -22,14 +19,29 @@ import { BusinessStatusNotesModal } from '../components/BusinessStatusNotesModal
 import { BusinessAssignmentModal } from '../components/BusinessAssignmentModal';
 import { LocationUpdateScreen } from './LocationUpdateScreen';
 import { useAuth } from '../contexts/AuthContext';
+import { useDataManager } from '../hooks/useDataManager';
 
 export const BusinessListScreen: React.FC = () => {
   const navigation = useNavigation();
-  const [businesses, setBusinesses] = useState<Business[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
+  const { user: currentUser } = useAuth();
+  const canManagePins = currentUser?.canManagePins || false;
+
+  // Use the centralized data manager
+  const {
+    businesses,
+    companies,
+    users,
+    selectedCompany,
+    setSelectedCompany,
+    createBusiness,
+    updateBusiness,
+    deleteBusiness,
+    syncAllData,
+  } = useDataManager();
+
+  // Local state for UI
   const [filteredBusinesses, setFilteredBusinesses] = useState<Business[]>([]);
   const [displayedBusinesses, setDisplayedBusinesses] = useState<Business[]>([]);
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | Business['status']>('all');
   const [showFormModal, setShowFormModal] = useState(false);
@@ -39,149 +51,38 @@ export const BusinessListScreen: React.FC = () => {
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [assignmentBusiness, setAssignmentBusiness] = useState<Business | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const { user: currentUser } = useAuth();
-  const canManagePins = currentUser?.canManagePins || false;
 
+  // Load data when component mounts
   useEffect(() => {
-    loadData();
+    syncAllData();
   }, []);
 
   // Refresh data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       console.log('BusinessListScreen focused - refreshing data...');
-      loadData();
-    }, [])
+      syncAllData();
+    }, [syncAllData])
   );
 
+  // Filter businesses based on selected company and user permissions
   useEffect(() => {
-    filterAndSearchBusinesses();
-  }, [filteredBusinesses, searchQuery, statusFilter]);
+    let filtered = businesses;
 
-  const loadData = async () => {
-    try {
-      console.log('Loading data from API...');
-      
-      // Load companies first
-      const companiesResponse = await apiService.getCompanies();
-      let companiesData: Company[] = [];
-
-      if (companiesResponse.success && companiesResponse.data) {
-        companiesData = companiesResponse.data;
-        console.log('Loaded companies from API:', companiesData.length);
-      } else {
-        console.log('API failed, loading from local storage');
-        companiesData = await StorageService.getCompanies();
-      }
-
-      setCompanies(companiesData);
-
-      // Load users for business assignment
-      const usersResponse = await apiService.getUsers();
-      if (usersResponse.success && usersResponse.data) {
-        setUsers(usersResponse.data);
-        console.log('Loaded users from API:', usersResponse.data.length);
-      }
-
-      let businessesData: Business[] = [];
-      
-      // Check if user can manage pins
-      if (!canManagePins && currentUser) {
-        // User cannot manage pins - load only assigned businesses
-        console.log('User cannot manage pins, loading assigned businesses for user:', currentUser.id);
-        const businessesResponse = await apiService.getBusinessesByAssignedUser(currentUser.id);
-        
-        if (businessesResponse.success && businessesResponse.data) {
-          businessesData = businessesResponse.data;
-          console.log('Loaded assigned businesses from API:', businessesData.length);
-        } else {
-          console.log('API failed, loading from local storage');
-          businessesData = await StorageService.getBusinessesByAssignedUser(currentUser.id);
-        }
-      } else {
-        // User can manage pins - load based on company selection
-        const selectedCompanyId = await AsyncStorage.getItem('selectedCompanyId');
-        
-        if (selectedCompanyId) {
-          // Load businesses for the selected company
-          console.log('Loading businesses for selected company:', selectedCompanyId);
-          const businessesResponse = await apiService.getBusinessesByCompany(selectedCompanyId);
-          
-          if (businessesResponse.success && businessesResponse.data) {
-            businessesData = businessesResponse.data;
-            console.log('Loaded businesses for company from API:', businessesData.length);
-          } else {
-            console.log('API failed, loading from local storage');
-            businessesData = await StorageService.getBusinessesByCompany(selectedCompanyId);
-          }
-        } else {
-          // Load all businesses if no company is selected
-          console.log('No company selected, loading all businesses');
-          const businessesResponse = await apiService.getBusinesses();
-          
-          if (businessesResponse.success && businessesResponse.data) {
-            businessesData = businessesResponse.data;
-            console.log('Loaded all businesses from API:', businessesData.length);
-          } else {
-            console.log('API failed, loading from local storage');
-            businessesData = await StorageService.getBusinesses();
-          }
-        }
-      }
-
-      console.log('Final loaded businesses:', businessesData.length);
-      console.log('Final loaded companies:', companiesData.length);
-      
-      setBusinesses(businessesData);
-    } catch (error) {
-      console.error('Error loading data:', error);
-      // Fallback to local storage
-      try {
-        const [businessesData, companiesData] = await Promise.all([
-          StorageService.getBusinesses(),
-          StorageService.getCompanies(),
-        ]);
-        setBusinesses(businessesData);
-        setCompanies(companiesData);
-      } catch (fallbackError) {
-        console.error('Fallback error:', fallbackError);
-        Alert.alert('Error', 'Failed to load data');
-      }
+    // Apply company filter if user can manage pins and a company is selected
+    if (canManagePins && selectedCompany) {
+      filtered = filtered.filter(business => business.companyId === selectedCompany.id);
+    } else if (!canManagePins && currentUser) {
+      // For users without pin permissions, only show assigned businesses
+      filtered = filtered.filter(business => business.assignedUserId === currentUser.id);
     }
-  };
 
-  const loadSelectedCompany = async () => {
-    try {
-      const selectedCompanyId = await AsyncStorage.getItem('selectedCompanyId');
-      if (selectedCompanyId) {
-        const company = companies.find(c => c.id === selectedCompanyId);
-        setSelectedCompany(company || null);
-        console.log('Selected company for filtering:', company?.name || 'Not found');
-      } else {
-        setSelectedCompany(null);
-        console.log('No company selected - showing all businesses');
-      }
-    } catch (error) {
-      console.error('Error loading selected company:', error);
-      setSelectedCompany(null);
-    }
-  };
+    setFilteredBusinesses(filtered);
+    console.log('Businesses filtered:', filtered.length);
+  }, [businesses, selectedCompany, canManagePins, currentUser]);
 
-  // Load selected company when companies are loaded
+  // Apply search and status filters
   useEffect(() => {
-    if (companies.length > 0) {
-      loadSelectedCompany();
-    }
-  }, [companies]);
-
-  // Filter businesses based on selected company
-  useEffect(() => {
-      setFilteredBusinesses(businesses);
-    console.log('Businesses loaded:', businesses.length);
-  }, [businesses]);
-
-  const filterAndSearchBusinesses = () => {
     let filtered = filteredBusinesses;
 
     // Apply status filter
@@ -200,7 +101,7 @@ export const BusinessListScreen: React.FC = () => {
     console.log('filterAndSearchBusinesses - final displayedBusinesses:', filtered.length);
     
     setDisplayedBusinesses(filtered);
-  };
+  }, [filteredBusinesses, searchQuery, statusFilter]);
 
   const handleBusinessPress = (business: Business) => {
     if (canManagePins) {
@@ -214,26 +115,19 @@ export const BusinessListScreen: React.FC = () => {
 
   const handleFormSubmit = async (formData: any) => {
     try {
-      console.log('Saving business to API...');
+      console.log('Saving business...');
       
-      let response;
       if (editingBusiness) {
         // Update existing business
-        response = await apiService.updateBusiness(editingBusiness.id, formData);
+        await updateBusiness(editingBusiness.id, formData);
       } else {
         // Create new business
-        response = await apiService.createBusiness(formData);
+        await createBusiness(formData);
       }
 
-      if (response.success) {
-        console.log('Business saved successfully');
-        await loadData();
-        setShowFormModal(false);
-        setEditingBusiness(null);
-      } else {
-        console.error('API error:', response.error);
-        Alert.alert('Error', response.error || 'Failed to save business');
-      }
+      console.log('Business saved successfully');
+      setShowFormModal(false);
+      setEditingBusiness(null);
     } catch (error) {
       console.error('Error saving business:', error);
       Alert.alert('Error', 'Failed to save business');
@@ -251,16 +145,9 @@ export const BusinessListScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              console.log('Deleting business from API...');
-              const response = await apiService.deleteBusiness(business.id);
-              
-              if (response.success) {
-                console.log('Business deleted successfully');
-                await loadData();
-              } else {
-                console.error('API error:', response.error);
-                Alert.alert('Error', response.error || 'Failed to delete business');
-              }
+              console.log('Deleting business...');
+              await deleteBusiness(business.id);
+              console.log('Business deleted successfully');
             } catch (error) {
               console.error('Error deleting business:', error);
               Alert.alert('Error', 'Failed to delete business');
@@ -281,14 +168,9 @@ export const BusinessListScreen: React.FC = () => {
         notes,
       };
       
-      const response = await apiService.updateBusiness(selectedBusiness.id, updatedBusiness);
-      if (response.success) {
-        await loadData();
-        setShowStatusNotesModal(false);
-        setSelectedBusiness(null);
-      } else {
-        Alert.alert('Error', response.error || 'Failed to update business');
-      }
+      await updateBusiness(selectedBusiness.id, updatedBusiness);
+      setShowStatusNotesModal(false);
+      setSelectedBusiness(null);
     } catch (error) {
       Alert.alert('Error', 'Failed to update business');
     }
@@ -300,7 +182,7 @@ export const BusinessListScreen: React.FC = () => {
   };
 
   const handleAssignmentChange = () => {
-    loadData(); // Refresh the data after assignment change
+    syncAllData(); // Refresh the data after assignment change
   };
 
   const handleUpdateLocation = (business: Business) => {
@@ -310,7 +192,7 @@ export const BusinessListScreen: React.FC = () => {
     }
   };
 
-  const getCompanyForBusiness = (business: Business): Company | undefined => {
+  const getCompanyForBusiness = (business: Business) => {
     return companies.find(company => company.id === business.companyId);
   };
 

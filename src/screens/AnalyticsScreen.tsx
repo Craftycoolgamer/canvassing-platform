@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,8 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
-import { apiService } from '../services/api';
 import { Business, Company } from '../types';
+import { useDataManager } from '../hooks/useDataManager';
 
 interface AnalyticsData {
   totalBusinesses: number;
@@ -26,70 +26,78 @@ interface AnalyticsData {
 }
 
 export const AnalyticsScreen: React.FC = () => {
+  const { user } = useAuth();
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTimeframe, setSelectedTimeframe] = useState<'week' | 'month' | 'quarter'>('month');
-  const [companies, setCompanies] = useState<Company[]>([]);
   const [expandedActivity, setExpandedActivity] = useState<string | null>(null);
-  const { user } = useAuth();
 
-  const loadAnalyticsData = async () => {
+  // Use the centralized data manager
+  const {
+    businesses,
+    companies,
+    syncAllData,
+  } = useDataManager();
+
+  const loadAnalyticsData = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Load businesses and companies
-      const [businessesResponse, companiesResponse] = await Promise.all([
-        apiService.getBusinesses(),
-        apiService.getCompanies()
-      ]);
-
-      if (businessesResponse.success && companiesResponse.success) {
-        const businesses = businessesResponse.data || [];
-        const companiesData = companiesResponse.data || [];
-        setCompanies(companiesData);
-
-        // Filter businesses by user's company if not admin
-        const filteredBusinesses = user?.role === 'Admin' 
-          ? businesses 
-          : businesses.filter(b => b.companyId === user?.companyId);
-
-        // Calculate analytics
-        const businessesByStatus = {
-          pending: filteredBusinesses.filter(b => b.status === 'pending').length,
-          contacted: filteredBusinesses.filter(b => b.status === 'contacted').length,
-          completed: filteredBusinesses.filter(b => b.status === 'completed').length,
-          'not-interested': filteredBusinesses.filter(b => b.status === 'not-interested').length,
-        };
-
-        const businessesByCompany: { [key: string]: number } = {};
-        if (user?.role === 'Admin') {
-          companiesData.forEach(company => {
-            businessesByCompany[company.name] = businesses.filter(b => b.companyId === company.id).length;
-          });
-        }
-
-        // Get recent activity (last 10 businesses)
-        const recentActivity = filteredBusinesses
-          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-          .slice(0, 10);
-
-        setAnalyticsData({
-          totalBusinesses: filteredBusinesses.length,
-          businessesByStatus,
-          businessesByCompany,
-          recentActivity,
-        });
-      }
+      // Ensure data is synced
+      await syncAllData();
     } catch (error) {
-      console.error('Error loading analytics data:', error);
-      Alert.alert('Error', 'Failed to load analytics data');
+      console.error('Error syncing data:', error);
+      Alert.alert('Error', 'Failed to sync data');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [syncAllData]);
 
+  // Calculate analytics from current data
+  const calculateAnalytics = useCallback(() => {
+    if (businesses.length === 0 && companies.length === 0) return;
+
+    // Filter businesses by user's company if not admin
+    const filteredBusinesses = user?.role === 'Admin' 
+      ? businesses 
+      : businesses.filter(b => b.companyId === user?.companyId);
+
+    // Calculate analytics
+    const businessesByStatus = {
+      pending: filteredBusinesses.filter(b => b.status === 'pending').length,
+      contacted: filteredBusinesses.filter(b => b.status === 'contacted').length,
+      completed: filteredBusinesses.filter(b => b.status === 'completed').length,
+      'not-interested': filteredBusinesses.filter(b => b.status === 'not-interested').length,
+    };
+
+    const businessesByCompany: { [key: string]: number } = {};
+    if (user?.role === 'Admin') {
+      companies.forEach(company => {
+        businessesByCompany[company.name] = businesses.filter(b => b.companyId === company.id).length;
+      });
+    }
+
+    // Get recent activity (last 10 businesses)
+    const recentActivity = filteredBusinesses
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 10);
+
+    setAnalyticsData({
+      totalBusinesses: filteredBusinesses.length,
+      businessesByStatus,
+      businessesByCompany,
+      recentActivity,
+    });
+  }, [user, businesses, companies]);
+
+  // Load data on mount
   useEffect(() => {
     loadAnalyticsData();
-  }, [user, selectedTimeframe]);
+  }, [loadAnalyticsData]);
+
+  // Calculate analytics when data changes
+  useEffect(() => {
+    calculateAnalytics();
+  }, [calculateAnalytics]);
 
   const getStatusColor = (status: string) => {
     switch (status) {

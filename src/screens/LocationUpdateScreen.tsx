@@ -10,8 +10,8 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Business, Company } from '../types';
-import { apiService } from '../services/api';
 import { Map } from '../components/Map';
+import { useDataManager } from '../hooks/useDataManager';
 
 const { width, height } = Dimensions.get('window');
 
@@ -32,6 +32,11 @@ export const LocationUpdateScreen: React.FC = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const mapRef = useRef<any>(null);
 
+  // Use the centralized data manager
+  const {
+    updateBusiness,
+  } = useDataManager();
+
   const handleMapCenterChange = (latitude: number, longitude: number) => {
     setCurrentLocation({ latitude, longitude });
   };
@@ -48,22 +53,18 @@ export const LocationUpdateScreen: React.FC = () => {
         longitude: currentLocation.longitude,
       };
 
-      const response = await apiService.updateBusiness(business.id, updatedBusiness);
+      await updateBusiness(business.id, updatedBusiness);
 
-      if (response.success) {
-        Alert.alert(
-          'Success',
-          'Business location updated successfully',
-          [
-            {
-              text: 'OK',
-              onPress: () => navigation.goBack(),
-            },
-          ]
-        );
-      } else {
-        Alert.alert('Error', response.error || 'Failed to update location');
-      }
+      Alert.alert(
+        'Success',
+        'Business location updated successfully',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack(),
+          },
+        ]
+      );
     } catch (error) {
       console.error('Error updating location:', error);
       Alert.alert('Error', 'Failed to update location');

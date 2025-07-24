@@ -10,10 +10,8 @@ import {
   TextInput,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Company, CompanyFormData } from '../types';
-import { apiService } from '../services/api';
-import { StorageService } from '../services/storage';
+import { useDataManager } from '../hooks/useDataManager';
 
 interface CompanySelectorProps {
   onCompanySelect?: (company: Company) => void;
@@ -24,8 +22,16 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
   onCompanySelect,
   onCompanyChange,
 }) => {
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const {
+    companies,
+    selectedCompany,
+    loadCompanies,
+    createCompany,
+    updateCompany,
+    deleteCompany,
+    setSelectedCompany: setSelectedCompanyData,
+  } = useDataManager();
+  
   const [showFormModal, setShowFormModal] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [formData, setFormData] = useState<CompanyFormData>({
@@ -36,53 +42,11 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
 
   useEffect(() => {
     loadCompanies();
-  }, []);
-
-  const loadCompanies = async () => {
-    try {
-      console.log('Loading companies from API...');
-      const response = await apiService.getCompanies();
-      
-      if (response.success && response.data) {
-        setCompanies(response.data);
-        console.log('Loaded companies from API:', response.data.length);
-        await loadSelectedCompany(response.data);
-      } else {
-        console.log('API failed, loading from local storage');
-        const companiesData = await StorageService.getCompanies();
-        setCompanies(companiesData);
-        await loadSelectedCompany(companiesData);
-      }
-    } catch (error) {
-      console.error('Error loading companies:', error);
-      try {
-        const companiesData = await StorageService.getCompanies();
-        setCompanies(companiesData);
-        await loadSelectedCompany(companiesData);
-      } catch (fallbackError) {
-        console.error('Fallback error:', fallbackError);
-        Alert.alert('Error', 'Failed to load companies');
-      }
-    }
-  };
-
-  const loadSelectedCompany = async (companiesList: Company[] = companies) => {
-    try {
-      const selectedCompanyId = await AsyncStorage.getItem('selectedCompanyId');
-      if (selectedCompanyId) {
-        const company = companiesList.find(c => c.id === selectedCompanyId);
-        setSelectedCompany(company || null);
-        console.log('Selected company:', company?.name);
-      }
-    } catch (error) {
-      console.error('Error loading selected company:', error);
-    }
-  };
+  }, [loadCompanies]);
 
   const handleCompanySelect = async (company: Company) => {
     try {
-      await AsyncStorage.setItem('selectedCompanyId', company.id);
-      setSelectedCompany(company);
+      await setSelectedCompanyData(company);
       console.log('Selected company:', company.name);
       
       // Call parent callback if provided
@@ -102,8 +66,7 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
 
   const handleClearSelection = async () => {
     try {
-      await AsyncStorage.removeItem('selectedCompanyId');
-      setSelectedCompany(null);
+      await setSelectedCompanyData(null);
       console.log('Cleared company selection');
       
       // Notify parent that company selection changed
@@ -137,20 +100,18 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
           style: 'destructive',
           onPress: async () => {
             try {
-              console.log('Deleting company from API...');
-              const response = await apiService.deleteCompany(company.id);
+              console.log('Deleting company...');
+              const success = await deleteCompany(company.id);
               
-              if (response.success) {
+              if (success) {
                 console.log('Company deleted successfully');
-                await loadCompanies();
                 
                 // If the deleted company was selected, clear selection
                 if (selectedCompany?.id === company.id) {
                   await handleClearSelection();
                 }
               } else {
-                console.error('API error:', response.error);
-                Alert.alert('Error', response.error || 'Failed to delete company');
+                Alert.alert('Error', 'Failed to delete company');
               }
             } catch (error) {
               console.error('Error deleting company:', error);
@@ -173,24 +134,22 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
   const handleSubmit = async () => {
     if (validateForm()) {
       try {
-        console.log('Saving company to API...');
+        console.log('Saving company...');
         
-        let response;
+        let result;
         if (editingCompany) {
-          response = await apiService.updateCompany(editingCompany.id, formData);
+          result = await updateCompany(editingCompany.id, formData);
         } else {
-          response = await apiService.createCompany(formData);
+          result = await createCompany(formData);
         }
 
-        if (response.success) {
+        if (result) {
           console.log('Company saved successfully');
-          await loadCompanies();
           setShowFormModal(false);
           setEditingCompany(null);
           setFormData({ name: '', pinIcon: 'business', color: '#007AFF' });
         } else {
-          console.error('API error:', response.error);
-          Alert.alert('Error', response.error || 'Failed to save company');
+          Alert.alert('Error', 'Failed to save company');
         }
       } catch (error) {
         console.error('Error saving company:', error);

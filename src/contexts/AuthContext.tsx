@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import AuthService from '../services/authService';
+import { dataManager } from '../services/DataManager';
 
 interface User {
   id: string;
@@ -72,7 +72,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Set the selected company ID to the user's company ID if they have one
         if (loggedInUser.companyId) {
           console.log('AuthContext: Setting selected company ID to user company ID:', loggedInUser.companyId);
-          await AsyncStorage.setItem('selectedCompanyId', loggedInUser.companyId);
+          // Find the company and set it as selected
+          const companies = await dataManager.loadCompanies();
+          const userCompany = companies.find(c => c.id === loggedInUser.companyId);
+          if (userCompany) {
+            await dataManager.setSelectedCompany(userCompany);
+          }
         }
         
         return true;
@@ -97,7 +102,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Set the selected company ID to the user's company ID if they have one
         if (registeredUser.companyId) {
           console.log('AuthContext: Setting selected company ID to user company ID:', registeredUser.companyId);
-          await AsyncStorage.setItem('selectedCompanyId', registeredUser.companyId);
+          // Find the company and set it as selected
+          const companies = await dataManager.loadCompanies();
+          const userCompany = companies.find(c => c.id === registeredUser.companyId);
+          if (userCompany) {
+            await dataManager.setSelectedCompany(userCompany);
+          }
         }
         
         return true;
@@ -114,8 +124,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await AuthService.logout();
       setUser(null);
-      // Clear the selected company ID when logging out
-      await AsyncStorage.removeItem('selectedCompanyId');
+      // Clear all data when logging out
+      await dataManager.clearAllData();
     } catch (error) {
       console.error('AuthContext: Logout error:', error);
     }
