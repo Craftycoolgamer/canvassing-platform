@@ -5,13 +5,19 @@ import { BusinessStackNavigator } from './BusinessStackNavigator';
 import { MapScreen } from '../screens/MapScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { AnalyticsScreen } from '../screens/AnalyticsScreen';
+import { PendingApprovalsScreen } from '../screens/PendingApprovalsScreen';
 import { useAuth } from '../contexts/AuthContext';
+import { useDataManager } from '../hooks/useDataManager';
 
 const Tab = createBottomTabNavigator();
 
 export const AppNavigator: React.FC = () => {
   const { user } = useAuth();
+  const { selectedCompany } = useDataManager();
   const isManagerOrAdmin = user?.role === 'Admin' || user?.role === 'Manager';
+
+  // Use selected company color for tab bar tint, fallback to default blue
+  const tabBarTintColor = selectedCompany?.color || '#007AFF';
 
   return (
     <Tab.Navigator
@@ -26,6 +32,8 @@ export const AppNavigator: React.FC = () => {
             iconName = 'map';
           } else if (route.name === 'Analytics') {
             iconName = 'analytics';
+          } else if (route.name === 'Pending Approvals') {
+            iconName = 'people';
           } else if (route.name === 'Settings') {
             iconName = 'settings';
           } else {
@@ -34,8 +42,13 @@ export const AppNavigator: React.FC = () => {
 
           return <MaterialIcons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#007AFF',
+        tabBarActiveTintColor: tabBarTintColor,
         tabBarInactiveTintColor: '#8E8E93',
+        tabBarStyle: {
+          backgroundColor: 'white',
+          borderTopWidth: 1,
+          borderTopColor: '#e0e0e0',
+        },
         headerShown: false,
       })}
     >
@@ -43,6 +56,9 @@ export const AppNavigator: React.FC = () => {
       <Tab.Screen name="Map" component={MapScreen} />
       {isManagerOrAdmin && (
         <Tab.Screen name="Analytics" component={AnalyticsScreen} />
+      )}
+      {isManagerOrAdmin && (
+        <Tab.Screen name="Pending Approvals" component={PendingApprovalsScreen} />
       )}
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>

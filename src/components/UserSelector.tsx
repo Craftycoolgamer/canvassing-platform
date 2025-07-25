@@ -261,7 +261,7 @@ export const UserSelector: React.FC<UserSelectorProps> = ({
                   styles.userName,
                   selectedUser?.id === user.id && styles.selectedUserName
                 ]}>
-                  {user.firstName} {user.lastName}
+                  {user.firstName} {user.lastName} {user.isApproved ? '' : '*'}
                 </Text>
                 <Text style={styles.userEmail}>{user.email}</Text>
                 {user.companyId && currentUser?.role === 'Admin' && (

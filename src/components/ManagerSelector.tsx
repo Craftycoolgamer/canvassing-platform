@@ -260,7 +260,7 @@ export const ManagerSelector: React.FC<ManagerSelectorProps> = ({
                   styles.managerName,
                   selectedManager?.id === manager.id && styles.selectedManagerName
                 ]}>
-                  {manager.firstName} {manager.lastName}
+                  {manager.firstName} {manager.lastName} {manager.isApproved ? '' : '*'}
                 </Text>
                 <Text style={styles.managerEmail}>{manager.email}</Text>
                 {manager.companyId && currentUser?.role === 'Admin' && (

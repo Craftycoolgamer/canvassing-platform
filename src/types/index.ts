@@ -34,6 +34,7 @@ export interface User {
   role: 'Admin' | 'Manager' | 'User';
   companyId?: string;
   isActive: boolean;
+  isApproved: boolean;
   canManagePins: boolean;
   lastLoginAt?: string;
   createdAt: string;
@@ -118,4 +119,15 @@ export interface ApiResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
+}
+
+export interface ApprovalRequest {
+  userId: string;
+  approvedByUserId: string;
+}
+
+export interface RejectionRequest {
+  userId: string;
+  rejectedByUserId: string;
+  reason?: string;
 } 

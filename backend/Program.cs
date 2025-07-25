@@ -5,6 +5,7 @@ using CanvassingBackend.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Security.Claims;
 
 namespace CanvassingBackend
 {
@@ -114,6 +115,64 @@ namespace CanvassingBackend
                 authService.RevokeToken(request.RefreshToken);
                 return Results.Ok(ApiResponse<object>.SuccessResponse((object?)null));
             });
+
+            // Approval endpoints (require authentication and admin/manager role)
+            app.MapGet("/api/auth/pending-approvals", (AuthService authService, HttpContext context) =>
+            {
+                var userId = context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Results.Unauthorized();
+                }
+
+                var user = authService.GetUserById(userId);
+                
+                if (user == null || (user.Role != "Admin" && user.Role != "Manager"))
+                {
+                    return Results.Forbid();
+                }
+
+                var pendingUsers = authService.GetPendingApprovals(userId);
+                
+                return Results.Ok(ApiResponse<List<User>>.SuccessResponse(pendingUsers));
+            }).RequireAuthorization();
+
+            app.MapPost("/api/auth/approve-user", (ApprovalRequest request, AuthService authService, HttpContext context) =>
+            {
+                var userId = context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                    return Results.Unauthorized();
+
+                var currentUser = authService.GetUserById(userId);
+                if (currentUser == null || (currentUser.Role != "Admin" && currentUser.Role != "Manager"))
+                    return Results.Forbid();
+
+                var success = authService.ApproveUser(request.UserId, userId);
+                if (!success)
+                    return Results.BadRequest(ApiResponse<object>.ErrorResponse("Failed to approve user"));
+
+                return Results.Ok(ApiResponse<object>.SuccessResponse((object?)null));
+            }).RequireAuthorization();
+
+            app.MapPost("/api/auth/reject-user", (RejectionRequest request, AuthService authService, HttpContext context) =>
+            {
+                var userId = context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                    return Results.Unauthorized();
+
+                var currentUser = authService.GetUserById(userId);
+                if (currentUser == null || (currentUser.Role != "Admin" && currentUser.Role != "Manager"))
+                    return Results.Forbid();
+
+                var success = authService.RejectUser(request.UserId, userId);
+                if (!success)
+                    return Results.BadRequest(ApiResponse<object>.ErrorResponse("Failed to reject user"));
+
+                return Results.Ok(ApiResponse<object>.SuccessResponse((object?)null));
+            }).RequireAuthorization();
+
+
 
             // Protected endpoints (require authentication)
             app.MapGet("/api/users", (DataService dataService) =>
@@ -238,10 +297,10 @@ namespace CanvassingBackend
             // Businesses endpoints (require authentication)
             app.MapGet("/api/businesses", (DataService dataService, HttpContext context) =>
             {
-                var userEmail = context.User?.FindFirst("email")?.Value;
-                if (!string.IsNullOrEmpty(userEmail))
+                var userId = context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(userId))
                 {
-                    var user = dataService.GetUserByEmail(userEmail);
+                    var user = dataService.GetUserById(userId);
                     if (user != null)
                     {
                         // If user cannot manage pins, only show assigned businesses
@@ -267,10 +326,10 @@ namespace CanvassingBackend
 
             app.MapGet("/api/businesses/company/{companyId}", (string companyId, DataService dataService, HttpContext context) =>
             {
-                var userEmail = context.User?.FindFirst("email")?.Value;
-                if (!string.IsNullOrEmpty(userEmail))
+                var userId = context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(userId))
                 {
-                    var user = dataService.GetUserByEmail(userEmail);
+                    var user = dataService.GetUserById(userId);
                     if (user != null)
                     {
                         // If user cannot manage pins, only show assigned businesses within the company
@@ -316,10 +375,10 @@ namespace CanvassingBackend
                     return Results.BadRequest(ApiResponse<Business>.ErrorResponse("Company not found"));
 
                 // Check user permissions
-                var userEmail = context.User?.FindFirst("email")?.Value;
-                if (!string.IsNullOrEmpty(userEmail))
+                var userId = context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(userId))
                 {
-                    var user = dataService.GetUserByEmail(userEmail);
+                    var user = dataService.GetUserById(userId);
                     if (user != null && user.Role != "Admin" && user.CompanyId != business.CompanyId)
                     {
                         return Results.Forbid();
@@ -337,10 +396,10 @@ namespace CanvassingBackend
                     business.Notes = new List<string>();
 
                 // Check user permissions
-                var userEmail = context.User?.FindFirst("email")?.Value;
-                if (!string.IsNullOrEmpty(userEmail))
+                var userId = context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(userId))
                 {
-                    var user = dataService.GetUserByEmail(userEmail);
+                    var user = dataService.GetUserById(userId);
                     if (user != null && user.Role != "Admin" && user.CompanyId != business.CompanyId)
                     {
                         return Results.Forbid();
@@ -389,10 +448,10 @@ namespace CanvassingBackend
                     return Results.NotFound(ApiResponse<Business>.ErrorResponse("User not found"));
 
                 // Check permissions - only managers and admins can assign businesses
-                var currentUserEmail = context.User?.FindFirst("email")?.Value;
-                if (!string.IsNullOrEmpty(currentUserEmail))
+                var currentUserId = context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(currentUserId))
                 {
-                    var currentUser = dataService.GetUserByEmail(currentUserEmail);
+                    var currentUser = dataService.GetUserById(currentUserId);
                     if (currentUser != null && currentUser.Role == "User")
                     {
                         return Results.Forbid();

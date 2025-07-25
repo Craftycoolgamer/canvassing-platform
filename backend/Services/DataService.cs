@@ -376,7 +376,8 @@ namespace CanvassingBackend.Services
                     CanManagePins = true,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    UpdatedAt = DateTime.UtcNow,
+                    IsApproved = true
                 },
                 new User
                 {
@@ -391,7 +392,8 @@ namespace CanvassingBackend.Services
                     CanManagePins = false,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    UpdatedAt = DateTime.UtcNow,
+                    IsApproved = true
                 },
                 new User
                 {
@@ -406,7 +408,8 @@ namespace CanvassingBackend.Services
                     CanManagePins = false,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    UpdatedAt = DateTime.UtcNow,
+                    IsApproved = false
                 },
                 new User
                 {
@@ -421,7 +424,8 @@ namespace CanvassingBackend.Services
                     CanManagePins = false,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    UpdatedAt = DateTime.UtcNow,
+                    IsApproved = false
                 },
                 new User
                 {
@@ -437,6 +441,7 @@ namespace CanvassingBackend.Services
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
+                    IsApproved = true
                 }
             };
 

@@ -73,4 +73,17 @@ namespace CanvassingBackend.Models
         
         public bool CanManagePins { get; set; } = false;
     }
+
+    public class ApprovalRequest
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string ApprovedByUserId { get; set; } = string.Empty;
+    }
+
+    public class RejectionRequest
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string RejectedByUserId { get; set; } = string.Empty;
+        public string? Reason { get; set; }
+    }
 } 

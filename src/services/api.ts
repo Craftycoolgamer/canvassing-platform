@@ -51,9 +51,26 @@ class ApiService {
         }
       }
 
-      const data = await response.json();
-      return data;
+      const responseText = await response.text();
+      
+      if (!responseText) {
+        return {
+          success: false,
+          error: 'Empty response from server',
+        };
+      }
+      
+      try {
+        const data = JSON.parse(responseText);
+        return data;
+      } catch (parseError) {
+        return {
+          success: false,
+          error: `JSON parse error: ${parseError instanceof Error ? parseError.message : 'Unknown parse error'}`,
+        };
+      }
     } catch (error) {
+      console.error(`Request error for ${endpoint}:`, error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -170,6 +187,32 @@ class ApiService {
   async unassignBusinessFromUser(businessId: string): Promise<ApiResponse<Business>> {
     return this.request<Business>(`/businesses/${businessId}/unassign`, {
       method: 'PUT',
+    });
+  }
+
+  // Approval endpoints
+  async getPendingApprovals(): Promise<ApiResponse<User[]>> {
+    return this.request<User[]>('/auth/pending-approvals');
+  }
+
+  async approveUser(userId: string, approvedByUserId: string): Promise<ApiResponse<void>> {
+    return this.request<void>('/auth/approve-user', {
+      method: 'POST',
+      body: JSON.stringify({
+        userId,
+        approvedByUserId,
+      }),
+    });
+  }
+
+  async rejectUser(userId: string, rejectedByUserId: string, reason?: string): Promise<ApiResponse<void>> {
+    return this.request<void>('/auth/reject-user', {
+      method: 'POST',
+      body: JSON.stringify({
+        userId,
+        rejectedByUserId,
+        reason,
+      }),
     });
   }
 }

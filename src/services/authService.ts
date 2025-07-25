@@ -212,6 +212,7 @@ class AuthService {
       const token = await this.getToken();
       return token ? { Authorization: `Bearer ${token}` } : {};
     } catch (error) {
+      console.error('AuthService - Error getting auth header:', error);
       return {};
     }
   }

@@ -12,6 +12,7 @@ interface User {
   role: 'Admin' | 'Manager' | 'User';
   companyId?: string;
   isActive: boolean;
+  isApproved: boolean;
   canManagePins: boolean;
   lastLoginAt?: string;
   createdAt: string;

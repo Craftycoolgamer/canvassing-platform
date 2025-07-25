@@ -6,15 +6,20 @@ import { NavigationContainer } from '@react-navigation/native';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { AuthNavigator } from './src/navigation/AuthNavigator';
+import { PendingApprovalScreen } from './src/screens/PendingApprovalScreen';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 
 const AppContent: React.FC = () => {
-  const { isAuthenticated, isLoading, refreshAuth } = useAuth();
+  const { isAuthenticated, isLoading, refreshAuth, user, logout } = useAuth();
 
   const handleAuthSuccess = async () => {
     console.log('Auth success callback triggered');
     // Force a refresh of the auth state
     await refreshAuth();
+  };
+
+  const handleLogout = async () => {
+    await logout();
   };
 
   if (isLoading) {
@@ -25,13 +30,17 @@ const AppContent: React.FC = () => {
     );
   }
 
-  console.log('AppContent render - isAuthenticated:', isAuthenticated);
+  console.log('AppContent render - isAuthenticated:', isAuthenticated, 'user:', user);
 
   return (
     <NavigationContainer>
       <StatusBar style="auto" />
       {isAuthenticated ? (
-        <AppNavigator />
+        user && !user.isApproved && user.role !== 'Admin' ? (
+          <PendingApprovalScreen onLogout={handleLogout} />
+        ) : (
+          <AppNavigator />
+        )
       ) : (
         <AuthNavigator onAuthSuccess={handleAuthSuccess} />
       )}

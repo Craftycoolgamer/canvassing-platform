@@ -35,5 +35,7 @@ namespace CanvassingBackend.Models
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         
         public DateTime? LastLoginAt { get; set; }
+        
+        public bool IsApproved { get; set; } = false; // New users must be approved by admin/manager
     }
 } 
