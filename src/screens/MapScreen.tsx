@@ -76,9 +76,11 @@ export const MapScreen: React.FC = () => {
       filtered = filtered.filter(business => business.assignedUserId === currentUser.id);
     }
 
-    setFilteredBusinesses(filtered);
-    console.log('Businesses filtered:', filtered.length);
-  }, [businesses, selectedCompany, canManagePins, currentUser]);
+    // Sort businesses by distance from map center
+    const sortedBusinesses = sortBusinessesByDistance(filtered, mapCenter.latitude, mapCenter.longitude);
+    setFilteredBusinesses(sortedBusinesses);
+    console.log('Businesses filtered and sorted by distance:', sortedBusinesses.length);
+  }, [businesses, selectedCompany, canManagePins, currentUser, mapCenter]);
 
   // Calculate distance between two coordinates using Haversine formula
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -300,6 +302,7 @@ export const MapScreen: React.FC = () => {
           businesses={filteredBusinesses}
           companies={companies}
           onBusinessPress={handleBusinessPress}
+          mapCenter={mapCenter}
         />
       </View>
 

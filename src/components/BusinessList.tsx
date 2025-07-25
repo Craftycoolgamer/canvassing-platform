@@ -8,15 +8,39 @@ interface BusinessListProps {
   businesses: Business[];
   companies: Company[];
   onBusinessPress: (business: Business) => void;
+  mapCenter?: { latitude: number; longitude: number };
 }
 
 export const BusinessList: React.FC<BusinessListProps> = ({
   businesses,
   companies,
   onBusinessPress,
+  mapCenter,
 }) => {
   const getCompanyForBusiness = (business: Business): Company | undefined => {
     return companies.find(company => company.id === business.companyId);
+  };
+
+  // Calculate distance between two coordinates using Haversine formula
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  // Format distance for display
+  const formatDistance = (distance: number): string => {
+    if (distance < 1) {
+      return `${Math.round(distance * 1000)}m`;
+    } else {
+      return `${distance.toFixed(1)}km`;
+    }
   };
 
   if (businesses.length === 0) {
@@ -44,6 +68,18 @@ export const BusinessList: React.FC<BusinessListProps> = ({
           const company = getCompanyForBusiness(business);
           if (!company) return null;
 
+          // Calculate distance from map center if available
+          let distanceText = '';
+          if (mapCenter) {
+            const distance = calculateDistance(
+              mapCenter.latitude,
+              mapCenter.longitude,
+              business.latitude,
+              business.longitude
+            );
+            distanceText = formatDistance(distance);
+          }
+
           return (
             <TouchableOpacity
               key={business.id}
@@ -58,9 +94,14 @@ export const BusinessList: React.FC<BusinessListProps> = ({
                 <Text style={styles.businessAddress}>{business.address}</Text>
                 <View style={styles.businessMeta}>
                   <Text style={styles.businessCompany}>{company.name}</Text>
-                  <Text style={[styles.businessStatus, { color: getStatusColor(business.status) }]}>
-                    {getStatusText(business.status)}
-                  </Text>
+                  <View style={styles.businessMetaRight}>
+                    {distanceText && (
+                      <Text style={styles.businessDistance}>{distanceText}</Text>
+                    )}
+                    <Text style={[styles.businessStatus, { color: getStatusColor(business.status) }]}>
+                      {getStatusText(business.status)}
+                    </Text>
+                  </View>
                 </View>
               </View>
               <MaterialIcons name="chevron-right" size={24} color="#ccc" />
@@ -135,6 +176,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  businessMetaRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  businessDistance: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
   },
   businessStatus: {
     fontSize: 12,

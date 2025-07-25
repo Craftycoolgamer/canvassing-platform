@@ -11,6 +11,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { CompanySelector } from '../components/CompanySelector';
 import { UserSelector } from '../components/UserSelector';
 import { ManagerSelector } from '../components/ManagerSelector';
+import SignalRStatus from '../components/SignalRStatus';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import { Company } from '../types';
@@ -80,6 +81,7 @@ export const SettingsScreen: React.FC = () => {
       <View style={styles.header}>
         <Text style={styles.title}>Settings</Text>
       </View>
+      
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* User Information Section */}
@@ -99,6 +101,9 @@ export const SettingsScreen: React.FC = () => {
                   </Text>
                 )}
               </View>
+              <View style={styles.signalRContainer}>
+                <SignalRStatus />
+              </View>
             </View>
           )}
 
@@ -109,6 +114,8 @@ export const SettingsScreen: React.FC = () => {
             </TouchableOpacity>
           )}
         </TouchableOpacity>
+
+        
 
         {/* Companies Section - Only show for Admin */}
         {isAdmin && (
@@ -194,6 +201,11 @@ const styles = StyleSheet.create({
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  signalRContainer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
   },
   userAvatar: {
     width: 50,

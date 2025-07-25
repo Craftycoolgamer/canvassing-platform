@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AuthService from '../services/authService';
 import { dataManager } from '../services/DataManager';
+import signalRService from '../services/signalRService';
 
 interface User {
   id: string;
@@ -52,6 +53,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const currentUser = await AuthService.getCurrentUser();
       if (currentUser) {
         setUser(currentUser);
+        
+        // Initialize SignalR connection for existing user
+        await signalRService.connect();
+        dataManager.initializeSignalRListeners();
+        
+        // Join appropriate groups based on user role
+        if (currentUser.role === 'Admin') {
+          await signalRService.joinAdminGroup();
+        }
+        if (currentUser.companyId) {
+          await signalRService.joinCompanyGroup(currentUser.companyId);
+        }
       }
     } catch (error) {
       console.error('AuthContext: Error checking auth status:', error);
@@ -68,6 +81,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('AuthContext: Login successful, updating user state');
         const loggedInUser = response.data.user;
         setUser(loggedInUser);
+        
+        // Initialize SignalR connection
+        await signalRService.connect();
+        dataManager.initializeSignalRListeners();
+        
+        // Join appropriate groups based on user role
+        if (loggedInUser.role === 'Admin') {
+          await signalRService.joinAdminGroup();
+        }
+        if (loggedInUser.companyId) {
+          await signalRService.joinCompanyGroup(loggedInUser.companyId);
+        }
         
         // Set the selected company ID to the user's company ID if they have one
         if (loggedInUser.companyId) {
@@ -99,6 +124,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const registeredUser = response.data.user;
         setUser(registeredUser);
         
+        // Initialize SignalR connection
+        await signalRService.connect();
+        dataManager.initializeSignalRListeners();
+        
+        // Join appropriate groups based on user role
+        if (registeredUser.role === 'Admin') {
+          await signalRService.joinAdminGroup();
+        }
+        if (registeredUser.companyId) {
+          await signalRService.joinCompanyGroup(registeredUser.companyId);
+        }
+        
         // Set the selected company ID to the user's company ID if they have one
         if (registeredUser.companyId) {
           console.log('AuthContext: Setting selected company ID to user company ID:', registeredUser.companyId);
@@ -124,7 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await AuthService.logout();
       setUser(null);
-      // Clear all data when logging out
+      // Clear all data when logging out (this will also disconnect SignalR)
       await dataManager.clearAllData();
     } catch (error) {
       console.error('AuthContext: Logout error:', error);

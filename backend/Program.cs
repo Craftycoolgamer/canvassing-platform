@@ -1,6 +1,7 @@
 using CanvassingBackend.Models;
 using CanvassingBackend.Services;
 using CanvassingBackend.Middleware;
+using CanvassingBackend.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -44,6 +45,9 @@ namespace CanvassingBackend
             builder.Services.AddSingleton<JwtService>();
             builder.Services.AddSingleton<AuthService>();
 
+            // Add SignalR
+            builder.Services.AddSignalR();
+
             builder.Services.AddCors(options =>
             {
                 options.AddDefaultPolicy(policy =>
@@ -62,6 +66,9 @@ namespace CanvassingBackend
             app.UseJwtMiddleware(); // Custom JWT middleware
             app.UseAuthentication();
             app.UseAuthorization();
+
+            // Map SignalR hub
+            app.MapHub<DataHub>("/datahub");
 
             // Health check endpoint
             app.MapGet("/api/health", () =>

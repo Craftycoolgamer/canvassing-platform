@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Business, Company, User, BusinessFormData, CompanyFormData, UserFormData, ApiResponse } from '../types';
-import { apiService } from './api';
+import { Business, Company, User, BusinessFormData, CompanyFormData, UserFormData } from '../types';
+import signalRService, { SignalRResponse } from './signalRService';
 import AuthService from './authService';
 
 // Storage keys
@@ -58,6 +58,7 @@ class DataManager {
 
   private observers: DataObserver[] = [];
   private syncInProgress = false;
+  private signalRUnsubscribers: (() => void)[] = [];
 
   // Observer pattern methods
   subscribe(observer: DataObserver): () => void {
@@ -68,6 +69,154 @@ class DataManager {
         this.observers.splice(index, 1);
       }
     };
+  }
+
+  // Initialize SignalR listeners and connection
+  async initializeSignalR(): Promise<void> {
+    try {
+      console.log('Initializing SignalR connection...');
+      
+      // Initialize SignalR listeners
+      this.initializeSignalRListeners();
+      
+      // Attempt to connect
+      const connected = await signalRService.connect();
+      if (connected) {
+        console.log('SignalR connected during initialization');
+      } else {
+        console.log('SignalR connection failed during initialization, will retry in background');
+      }
+    } catch (error) {
+      console.error('Error initializing SignalR:', error);
+    }
+  }
+
+  // Initialize SignalR listeners
+  initializeSignalRListeners(): void {
+    // Business events
+    this.signalRUnsubscribers.push(
+      signalRService.on('businessCreated', (business: Business) => {
+        const updatedBusinesses = [...this.state.businesses, business];
+        this.setState({ businesses: updatedBusinesses });
+        this.saveToStorage(STORAGE_KEYS.BUSINESSES, updatedBusinesses);
+        this.notifyObservers({ type: 'businesses', data: updatedBusinesses });
+      })
+    );
+
+    this.signalRUnsubscribers.push(
+      signalRService.on('businessUpdated', (business: Business) => {
+        const updatedBusinesses = this.state.businesses.map(b => 
+          b.id === business.id ? business : b
+        );
+        this.setState({ businesses: updatedBusinesses });
+        this.saveToStorage(STORAGE_KEYS.BUSINESSES, updatedBusinesses);
+        this.notifyObservers({ type: 'businesses', data: updatedBusinesses });
+      })
+    );
+
+    this.signalRUnsubscribers.push(
+      signalRService.on('businessDeleted', (businessId: string) => {
+        const updatedBusinesses = this.state.businesses.filter(b => b.id !== businessId);
+        this.setState({ businesses: updatedBusinesses });
+        this.saveToStorage(STORAGE_KEYS.BUSINESSES, updatedBusinesses);
+        this.notifyObservers({ type: 'businesses', data: updatedBusinesses });
+      })
+    );
+
+    // Company events
+    this.signalRUnsubscribers.push(
+      signalRService.on('companyCreated', (company: Company) => {
+        const updatedCompanies = [...this.state.companies, company];
+        this.setState({ companies: updatedCompanies });
+        this.saveToStorage(STORAGE_KEYS.COMPANIES, updatedCompanies);
+        this.notifyObservers({ type: 'companies', data: updatedCompanies });
+      })
+    );
+
+    this.signalRUnsubscribers.push(
+      signalRService.on('companyUpdated', (company: Company) => {
+        const updatedCompanies = this.state.companies.map(c => 
+          c.id === company.id ? company : c
+        );
+        this.setState({ companies: updatedCompanies });
+        this.saveToStorage(STORAGE_KEYS.COMPANIES, updatedCompanies);
+        this.notifyObservers({ type: 'companies', data: updatedCompanies });
+        
+        // Update selected company if it was the one updated
+        if (this.state.selectedCompany?.id === company.id) {
+          this.setState({ selectedCompany: company });
+          this.notifyObservers({ type: 'selectedCompany', data: company });
+        }
+      })
+    );
+
+    this.signalRUnsubscribers.push(
+      signalRService.on('companyDeleted', (companyId: string) => {
+        const updatedCompanies = this.state.companies.filter(c => c.id !== companyId);
+        this.setState({ companies: updatedCompanies });
+        this.saveToStorage(STORAGE_KEYS.COMPANIES, updatedCompanies);
+        this.notifyObservers({ type: 'companies', data: updatedCompanies });
+        
+        // Clear selected company if it was deleted
+        if (this.state.selectedCompany?.id === companyId) {
+          this.setSelectedCompany(null);
+        }
+      })
+    );
+
+    // User events
+    this.signalRUnsubscribers.push(
+      signalRService.on('userCreated', (user: User) => {
+        const updatedUsers = [...this.state.users, user];
+        this.setState({ users: updatedUsers });
+        this.saveToStorage(STORAGE_KEYS.USERS, updatedUsers);
+        this.notifyObservers({ type: 'users', data: updatedUsers });
+      })
+    );
+
+    this.signalRUnsubscribers.push(
+      signalRService.on('userUpdated', (user: User) => {
+        const updatedUsers = this.state.users.map(u => 
+          u.id === user.id ? user : u
+        );
+        this.setState({ users: updatedUsers });
+        this.saveToStorage(STORAGE_KEYS.USERS, updatedUsers);
+        this.notifyObservers({ type: 'users', data: updatedUsers });
+        
+        // Update selected user/manager if it was the one updated
+        if (this.state.selectedUser?.id === user.id) {
+          this.setState({ selectedUser: user });
+          this.notifyObservers({ type: 'selectedUser', data: user });
+        }
+        if (this.state.selectedManager?.id === user.id) {
+          this.setState({ selectedManager: user });
+          this.notifyObservers({ type: 'selectedManager', data: user });
+        }
+      })
+    );
+
+    this.signalRUnsubscribers.push(
+      signalRService.on('userDeleted', (userId: string) => {
+        const updatedUsers = this.state.users.filter(u => u.id !== userId);
+        this.setState({ users: updatedUsers });
+        this.saveToStorage(STORAGE_KEYS.USERS, updatedUsers);
+        this.notifyObservers({ type: 'users', data: updatedUsers });
+        
+        // Clear selected user/manager if it was deleted
+        if (this.state.selectedUser?.id === userId) {
+          this.setSelectedUser(null);
+        }
+        if (this.state.selectedManager?.id === userId) {
+          this.setSelectedManager(null);
+        }
+      })
+    );
+  }
+
+  // Clean up SignalR listeners
+  cleanupSignalRListeners(): void {
+    this.signalRUnsubscribers.forEach(unsubscribe => unsubscribe());
+    this.signalRUnsubscribers = [];
   }
 
   private notifyObservers(event: DataEvent): void {
@@ -133,8 +282,8 @@ class DataManager {
     try {
       this.setState({ isLoading: true });
       
-      // Try API first
-      const response = await apiService.getCompanies();
+      // Try SignalR first
+      const response = await signalRService.getAllCompanies();
       let companies: Company[] = [];
       
       if (response.success && response.data) {
@@ -144,8 +293,10 @@ class DataManager {
           companies,
           lastSync: { ...this.state.lastSync, companies: new Date() }
         });
+        console.log('Companies loaded successfully from SignalR');
       } else {
         // Fallback to local storage
+        console.log('SignalR failed, loading companies from local storage');
         companies = await this.loadFromStorage(STORAGE_KEYS.COMPANIES, []);
         this.setState({ companies });
       }
@@ -154,8 +305,10 @@ class DataManager {
       return companies;
     } catch (error) {
       console.error('Error loading companies:', error);
+      // Always fallback to local storage on any error
       const companies = await this.loadFromStorage(STORAGE_KEYS.COMPANIES, []);
       this.setState({ companies });
+      this.notifyObservers({ type: 'companies', data: companies });
       return companies;
     } finally {
       this.setState({ isLoading: false });
@@ -164,7 +317,7 @@ class DataManager {
 
   async createCompany(data: CompanyFormData): Promise<Company | null> {
     try {
-      const response = await apiService.createCompany(data);
+      const response = await signalRService.createCompany(data);
       if (response.success && response.data) {
         const newCompany = response.data;
         const updatedCompanies = [...this.state.companies, newCompany];
@@ -184,7 +337,7 @@ class DataManager {
 
   async updateCompany(id: string, data: Partial<CompanyFormData>): Promise<Company | null> {
     try {
-      const response = await apiService.updateCompany(id, data);
+      const response = await signalRService.updateCompany(id, data);
       if (response.success && response.data) {
         const updatedCompany = response.data;
         const updatedCompanies = this.state.companies.map(c => 
@@ -212,8 +365,8 @@ class DataManager {
 
   async deleteCompany(id: string): Promise<boolean> {
     try {
-      const response = await apiService.deleteCompany(id);
-      if (response.success) {
+      const response = await signalRService.deleteCompany(id);
+      if (response.success && response.data) {
         const updatedCompanies = this.state.companies.filter(c => c.id !== id);
         
         this.setState({ companies: updatedCompanies });
@@ -248,17 +401,17 @@ class DataManager {
       const selectedCompanyId = await this.getSelectedCompanyId();
       
       let businesses: Business[] = [];
-      let response: ApiResponse<Business[]>;
+      let response: SignalRResponse<Business[]>;
       
       if (currentUser && !currentUser.canManagePins) {
         // User cannot manage pins - load only assigned businesses
-        response = await apiService.getBusinessesByAssignedUser(currentUser.id);
+        response = await signalRService.getBusinessesByAssignedUser(currentUser.id);
       } else if (selectedCompanyId) {
         // Load businesses for selected company
-        response = await apiService.getBusinessesByCompany(selectedCompanyId);
+        response = await signalRService.getBusinessesByCompany(selectedCompanyId);
       } else {
         // Load all businesses
-        response = await apiService.getBusinesses();
+        response = await signalRService.getAllBusinesses();
       }
       
       if (response.success && response.data) {
@@ -288,7 +441,7 @@ class DataManager {
 
   async createBusiness(data: BusinessFormData): Promise<Business | null> {
     try {
-      const response = await apiService.createBusiness(data);
+      const response = await signalRService.createBusiness(data);
       if (response.success && response.data) {
         const newBusiness = response.data;
         const updatedBusinesses = [...this.state.businesses, newBusiness];
@@ -308,7 +461,7 @@ class DataManager {
 
   async updateBusiness(id: string, data: Partial<BusinessFormData>): Promise<Business | null> {
     try {
-      const response = await apiService.updateBusiness(id, data);
+      const response = await signalRService.updateBusiness(id, data);
       if (response.success && response.data) {
         const updatedBusiness = response.data;
         const updatedBusinesses = this.state.businesses.map(b => 
@@ -330,8 +483,8 @@ class DataManager {
 
   async deleteBusiness(id: string): Promise<boolean> {
     try {
-      const response = await apiService.deleteBusiness(id);
-      if (response.success) {
+      const response = await signalRService.deleteBusiness(id);
+      if (response.success && response.data) {
         const updatedBusinesses = this.state.businesses.filter(b => b.id !== id);
         
         this.setState({ businesses: updatedBusinesses });
@@ -356,7 +509,7 @@ class DataManager {
     try {
       this.setState({ isLoading: true });
       
-      const response = await apiService.getUsers();
+      const response = await signalRService.getAllUsers();
       let users: User[] = [];
       
       if (response.success && response.data) {
@@ -386,7 +539,7 @@ class DataManager {
 
   async createUser(data: UserFormData): Promise<User | null> {
     try {
-      const response = await apiService.createUser(data);
+      const response = await signalRService.createUser(data);
       if (response.success && response.data) {
         const newUser = response.data;
         const updatedUsers = [...this.state.users, newUser];
@@ -406,7 +559,7 @@ class DataManager {
 
   async updateUser(id: string, data: Partial<UserFormData>): Promise<User | null> {
     try {
-      const response = await apiService.updateUser(id, data);
+      const response = await signalRService.updateUser(id, data);
       if (response.success && response.data) {
         const updatedUser = response.data;
         const updatedUsers = this.state.users.map(u => 
@@ -438,8 +591,8 @@ class DataManager {
 
   async deleteUser(id: string): Promise<boolean> {
     try {
-      const response = await apiService.deleteUser(id);
-      if (response.success) {
+      const response = await signalRService.deleteUser(id);
+      if (response.success && response.data) {
         const updatedUsers = this.state.users.filter(u => u.id !== id);
         
         this.setState({ users: updatedUsers });
@@ -537,7 +690,7 @@ class DataManager {
   // Business assignment operations
   async assignBusinessToUser(businessId: string, userId: string): Promise<Business | null> {
     try {
-      const response = await apiService.assignBusinessToUser(businessId, userId);
+      const response = await signalRService.assignBusinessToUser(businessId, userId);
       if (response.success && response.data) {
         const updatedBusiness = response.data;
         const updatedBusinesses = this.state.businesses.map(b => 
@@ -559,7 +712,7 @@ class DataManager {
 
   async unassignBusinessFromUser(businessId: string): Promise<Business | null> {
     try {
-      const response = await apiService.unassignBusinessFromUser(businessId);
+      const response = await signalRService.unassignBusinessFromUser(businessId);
       if (response.success && response.data) {
         const updatedBusiness = response.data;
         const updatedBusinesses = this.state.businesses.map(b => 
@@ -585,11 +738,28 @@ class DataManager {
     
     this.syncInProgress = true;
     try {
-      await Promise.all([
-        this.loadCompanies(true),
-        this.loadUsers(true),
-        this.loadBusinesses(true),
-      ]);
+      console.log('Starting data sync...');
+      
+      // Try to sync all data, but don't fail if one fails
+      const syncPromises = [
+        this.loadCompanies(true).catch(error => {
+          console.error('Failed to sync companies:', error);
+          return [];
+        }),
+        this.loadUsers(true).catch(error => {
+          console.error('Failed to sync users:', error);
+          return [];
+        }),
+        this.loadBusinesses(true).catch(error => {
+          console.error('Failed to sync businesses:', error);
+          return [];
+        }),
+      ];
+      
+      await Promise.allSettled(syncPromises);
+      console.log('Data sync completed');
+    } catch (error) {
+      console.error('Error during data sync:', error);
     } finally {
       this.syncInProgress = false;
     }
@@ -598,6 +768,10 @@ class DataManager {
   // Clear all data (for logout)
   async clearAllData(): Promise<void> {
     try {
+      // Clean up SignalR
+      this.cleanupSignalRListeners();
+      await signalRService.disconnect();
+      
       await AsyncStorage.multiRemove([
         STORAGE_KEYS.COMPANIES,
         STORAGE_KEYS.BUSINESSES,

@@ -54,7 +54,7 @@ export const useDataManager = (): UseDataManagerReturn => {
   const [selectedManager, setSelectedManagerState] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Subscribe to data changes
+  // Subscribe to data changes and initialize SignalR
   useEffect(() => {
     const unsubscribe = dataManager.subscribe((event) => {
       switch (event.type) {
@@ -88,6 +88,9 @@ export const useDataManager = (): UseDataManagerReturn => {
     setSelectedUserState(state.selectedUser);
     setSelectedManagerState(state.selectedManager);
     setIsLoading(state.isLoading);
+
+    // Initialize SignalR connection
+    dataManager.initializeSignalR();
 
     return unsubscribe;
   }, []);

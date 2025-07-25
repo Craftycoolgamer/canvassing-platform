@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
+import { MaterialIcons } from '@expo/vector-icons';
 import { Business, Company } from '../types';
 
 interface MapProps {
@@ -101,6 +102,23 @@ export const Map = forwardRef<any, MapProps>(({
       case 'pending':
       default:
         return '#FFA500'; // Orange
+    }
+  };
+
+  // Handle center on location button press
+  const handleCenterOnLocation = () => {
+    if (location?.coords && webViewRef.current && mapReady) {
+      const { latitude, longitude } = location.coords;
+      const centerScript = `
+        map.setView([${latitude}, ${longitude}], 16);
+      `;
+      webViewRef.current.injectJavaScript(centerScript);
+    } else if (userLocation && webViewRef.current && mapReady) {
+      const { latitude, longitude } = userLocation;
+      const centerScript = `
+        map.setView([${latitude}, ${longitude}], 16);
+      `;
+      webViewRef.current.injectJavaScript(centerScript);
     }
   };
 
@@ -401,6 +419,14 @@ export const Map = forwardRef<any, MapProps>(({
             Tap on the map to add your first business
           </Text>
         </View>
+        {(location?.coords || userLocation) && (
+          <TouchableOpacity
+            style={styles.centerOnLocationButton}
+            onPress={handleCenterOnLocation}
+          >
+            <MaterialIcons name="my-location" size={24} color="white" />
+          </TouchableOpacity>
+        )}
       </View>
     );
   }
@@ -421,6 +447,14 @@ export const Map = forwardRef<any, MapProps>(({
           setMapReady(true);
         }}
       />
+      {(location?.coords || userLocation) && (
+        <TouchableOpacity
+          style={styles.centerOnLocationButton}
+          onPress={handleCenterOnLocation}
+        >
+          <MaterialIcons name="my-location" size={24} color="white" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 });
@@ -451,5 +485,21 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
     marginBottom: 16,
+  },
+  centerOnLocationButton: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    backgroundColor: '#007AFF',
+    borderRadius: 15,
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
 }); 
