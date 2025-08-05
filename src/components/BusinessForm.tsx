@@ -82,6 +82,7 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
   const [errors, setErrors] = useState<Partial<BusinessFormData> & { location?: string }>({});
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (business) {
@@ -161,18 +162,22 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
-    if (!canManagePins) {
+  const handleSubmit = async () => {
+    if (!canManagePins || isSubmitting) {
       return;
     }
 
     if (validateForm()) {
-      // Clean phone number before submitting
-      const submissionData = {
-        ...formData,
-        phone: formData.phone.replace(/\D/g, ''),
-      };
-      onSubmit(submissionData);
+      setIsSubmitting(true);
+      try {
+        const submissionData = {
+          ...formData,
+          phone: formData.phone.replace(/\D/g, ''),
+        };
+        await onSubmit(submissionData);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -406,12 +411,12 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
             <Text style={styles.cancelBtnText}>Cancel</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.submitBtn, !canManagePins && styles.disabledButton]} 
+            style={[styles.submitBtn, (!canManagePins || isSubmitting) && styles.disabledButton]} 
             onPress={handleSubmit}
-            disabled={!canManagePins}
+            disabled={!canManagePins || isSubmitting}
           >
-            <Text style={[styles.submitBtnText, !canManagePins && styles.disabledButtonText]}>
-              {!canManagePins ? 'No Permission' : (business ? 'Update' : 'Add') + ' Business'}
+            <Text style={[styles.submitBtnText, (!canManagePins || isSubmitting) && styles.disabledButtonText]}>
+              {!canManagePins ? 'No Permission' : isSubmitting ? 'Saving...' : (business ? 'Update' : 'Add') + ' Business'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -498,6 +503,10 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
                 latitude: updatedBusiness.latitude,
                 longitude: updatedBusiness.longitude,
               }));
+              // Clear location error if it exists
+              if (errors.location) {
+                setErrors(prev => ({ ...prev, location: undefined }));
+              }
               setShowLocationModal(false);
             }}
             initialPosition={mapCenter}

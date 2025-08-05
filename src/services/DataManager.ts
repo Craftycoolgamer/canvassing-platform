@@ -96,30 +96,39 @@ class DataManager {
     // Business events
     this.signalRUnsubscribers.push(
       signalRService.on('businessCreated', (business: Business) => {
-        const updatedBusinesses = [...this.state.businesses, business];
-        this.setState({ businesses: updatedBusinesses });
-        this.saveToStorage(STORAGE_KEYS.BUSINESSES, updatedBusinesses);
-        this.notifyObservers({ type: 'businesses', data: updatedBusinesses });
+        const existingBusiness = this.state.businesses.find(b => b.id === business.id);
+        if (!existingBusiness) {
+          const updatedBusinesses = [...this.state.businesses, business];
+          this.setState({ businesses: updatedBusinesses });
+          this.saveToStorage(STORAGE_KEYS.BUSINESSES, updatedBusinesses);
+          this.notifyObservers({ type: 'businesses', data: updatedBusinesses });
+        }
       })
     );
 
     this.signalRUnsubscribers.push(
       signalRService.on('businessUpdated', (business: Business) => {
-        const updatedBusinesses = this.state.businesses.map(b => 
-          b.id === business.id ? business : b
-        );
-        this.setState({ businesses: updatedBusinesses });
-        this.saveToStorage(STORAGE_KEYS.BUSINESSES, updatedBusinesses);
-        this.notifyObservers({ type: 'businesses', data: updatedBusinesses });
+        const existingBusiness = this.state.businesses.find(b => b.id === business.id);
+        if (existingBusiness) {
+          const updatedBusinesses = this.state.businesses.map(b => 
+            b.id === business.id ? business : b
+          );
+          this.setState({ businesses: updatedBusinesses });
+          this.saveToStorage(STORAGE_KEYS.BUSINESSES, updatedBusinesses);
+          this.notifyObservers({ type: 'businesses', data: updatedBusinesses });
+        }
       })
     );
 
     this.signalRUnsubscribers.push(
       signalRService.on('businessDeleted', (businessId: string) => {
-        const updatedBusinesses = this.state.businesses.filter(b => b.id !== businessId);
-        this.setState({ businesses: updatedBusinesses });
-        this.saveToStorage(STORAGE_KEYS.BUSINESSES, updatedBusinesses);
-        this.notifyObservers({ type: 'businesses', data: updatedBusinesses });
+        const existingBusiness = this.state.businesses.find(b => b.id === businessId);
+        if (existingBusiness) {
+          const updatedBusinesses = this.state.businesses.filter(b => b.id !== businessId);
+          this.setState({ businesses: updatedBusinesses });
+          this.saveToStorage(STORAGE_KEYS.BUSINESSES, updatedBusinesses);
+          this.notifyObservers({ type: 'businesses', data: updatedBusinesses });
+        }
       })
     );
 
@@ -213,7 +222,6 @@ class DataManager {
     );
   }
 
-  // Clean up SignalR listeners
   cleanupSignalRListeners(): void {
     this.signalRUnsubscribers.forEach(unsubscribe => unsubscribe());
     this.signalRUnsubscribers = [];
@@ -443,14 +451,7 @@ class DataManager {
     try {
       const response = await signalRService.createBusiness(data);
       if (response.success && response.data) {
-        const newBusiness = response.data;
-        const updatedBusinesses = [...this.state.businesses, newBusiness];
-        
-        this.setState({ businesses: updatedBusinesses });
-        await this.saveToStorage(STORAGE_KEYS.BUSINESSES, updatedBusinesses);
-        this.notifyObservers({ type: 'businesses', data: updatedBusinesses });
-        
-        return newBusiness;
+        return response.data;
       }
       return null;
     } catch (error) {
@@ -463,16 +464,7 @@ class DataManager {
     try {
       const response = await signalRService.updateBusiness(id, data);
       if (response.success && response.data) {
-        const updatedBusiness = response.data;
-        const updatedBusinesses = this.state.businesses.map(b => 
-          b.id === id ? updatedBusiness : b
-        );
-        
-        this.setState({ businesses: updatedBusinesses });
-        await this.saveToStorage(STORAGE_KEYS.BUSINESSES, updatedBusinesses);
-        this.notifyObservers({ type: 'businesses', data: updatedBusinesses });
-        
-        return updatedBusiness;
+        return response.data;
       }
       return null;
     } catch (error) {
@@ -485,12 +477,6 @@ class DataManager {
     try {
       const response = await signalRService.deleteBusiness(id);
       if (response.success && response.data) {
-        const updatedBusinesses = this.state.businesses.filter(b => b.id !== id);
-        
-        this.setState({ businesses: updatedBusinesses });
-        await this.saveToStorage(STORAGE_KEYS.BUSINESSES, updatedBusinesses);
-        this.notifyObservers({ type: 'businesses', data: updatedBusinesses });
-        
         return true;
       }
       return false;
