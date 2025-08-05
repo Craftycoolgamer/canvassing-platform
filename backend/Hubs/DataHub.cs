@@ -175,7 +175,7 @@ namespace CanvassingBackend.Hubs
             return createdUser;
         }
 
-        public async Task<User?> UpdateUser(string id, User user)
+        public async Task<User?> UpdateUser(User user)
         {
             var updatedUser = _dataService.UpdateUser(user);
             if (updatedUser != null)

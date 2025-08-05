@@ -59,8 +59,6 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
   initialCoordinates,
   mapCenter,
 }) => {
-  console.log('BusinessForm - companies received:', companies.length);
-  console.log('BusinessForm - companies:', companies);
 
   const { user: currentUser } = useAuth();
   const canManagePins = currentUser?.canManagePins || false;
@@ -112,13 +110,11 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
       if (companies.length > 0) {
         if (currentUser?.role === 'Admin') {
           // Admin can choose any company, default to first one
-          console.log('Setting default company for admin:', companies[0].id);
           setFormData(prev => ({ ...prev, companyId: companies[0].id }));
         } else {
           // Non-admin users are restricted to their assigned company
           const userCompany = companies.find(company => company.id === currentUser?.companyId);
           if (userCompany) {
-            console.log('Setting user company:', userCompany.id);
             setFormData(prev => ({ ...prev, companyId: userCompany.id }));
           }
         }

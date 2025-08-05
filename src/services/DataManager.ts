@@ -135,40 +135,49 @@ class DataManager {
     // Company events
     this.signalRUnsubscribers.push(
       signalRService.on('companyCreated', (company: Company) => {
-        const updatedCompanies = [...this.state.companies, company];
-        this.setState({ companies: updatedCompanies });
-        this.saveToStorage(STORAGE_KEYS.COMPANIES, updatedCompanies);
-        this.notifyObservers({ type: 'companies', data: updatedCompanies });
+        const existingCompany = this.state.companies.find(c => c.id === company.id);
+        if (!existingCompany) {
+          const updatedCompanies = [...this.state.companies, company];
+          this.setState({ companies: updatedCompanies });
+          this.saveToStorage(STORAGE_KEYS.COMPANIES, updatedCompanies);
+          this.notifyObservers({ type: 'companies', data: updatedCompanies });
+        }
       })
     );
 
     this.signalRUnsubscribers.push(
       signalRService.on('companyUpdated', (company: Company) => {
-        const updatedCompanies = this.state.companies.map(c => 
-          c.id === company.id ? company : c
-        );
-        this.setState({ companies: updatedCompanies });
-        this.saveToStorage(STORAGE_KEYS.COMPANIES, updatedCompanies);
-        this.notifyObservers({ type: 'companies', data: updatedCompanies });
-        
-        // Update selected company if it was the one updated
-        if (this.state.selectedCompany?.id === company.id) {
-          this.setState({ selectedCompany: company });
-          this.notifyObservers({ type: 'selectedCompany', data: company });
+        const existingCompany = this.state.companies.find(c => c.id === company.id);
+        if (existingCompany) {
+          const updatedCompanies = this.state.companies.map(c => 
+            c.id === company.id ? company : c
+          );
+          this.setState({ companies: updatedCompanies });
+          this.saveToStorage(STORAGE_KEYS.COMPANIES, updatedCompanies);
+          this.notifyObservers({ type: 'companies', data: updatedCompanies });
+          
+          // Update selected company if it was the one updated
+          if (this.state.selectedCompany?.id === company.id) {
+            this.setState({ selectedCompany: company });
+            this.notifyObservers({ type: 'selectedCompany', data: company });
+          }
         }
       })
     );
 
     this.signalRUnsubscribers.push(
       signalRService.on('companyDeleted', (companyId: string) => {
-        const updatedCompanies = this.state.companies.filter(c => c.id !== companyId);
-        this.setState({ companies: updatedCompanies });
-        this.saveToStorage(STORAGE_KEYS.COMPANIES, updatedCompanies);
-        this.notifyObservers({ type: 'companies', data: updatedCompanies });
-        
-        // Clear selected company if it was deleted
-        if (this.state.selectedCompany?.id === companyId) {
-          this.setSelectedCompany(null);
+        const existingCompany = this.state.companies.find(c => c.id === companyId);
+        if (existingCompany) {
+          const updatedCompanies = this.state.companies.filter(c => c.id !== companyId);
+          this.setState({ companies: updatedCompanies });
+          this.saveToStorage(STORAGE_KEYS.COMPANIES, updatedCompanies);
+          this.notifyObservers({ type: 'companies', data: updatedCompanies });
+          
+          // Clear selected company if it was deleted
+          if (this.state.selectedCompany?.id === companyId) {
+            this.setSelectedCompany(null);
+          }
         }
       })
     );
@@ -176,47 +185,56 @@ class DataManager {
     // User events
     this.signalRUnsubscribers.push(
       signalRService.on('userCreated', (user: User) => {
-        const updatedUsers = [...this.state.users, user];
-        this.setState({ users: updatedUsers });
-        this.saveToStorage(STORAGE_KEYS.USERS, updatedUsers);
-        this.notifyObservers({ type: 'users', data: updatedUsers });
+        const existingUser = this.state.users.find(u => u.id === user.id);
+        if (!existingUser) {
+          const updatedUsers = [...this.state.users, user];
+          this.setState({ users: updatedUsers });
+          this.saveToStorage(STORAGE_KEYS.USERS, updatedUsers);
+          this.notifyObservers({ type: 'users', data: updatedUsers });
+        }
       })
     );
 
     this.signalRUnsubscribers.push(
       signalRService.on('userUpdated', (user: User) => {
-        const updatedUsers = this.state.users.map(u => 
-          u.id === user.id ? user : u
-        );
-        this.setState({ users: updatedUsers });
-        this.saveToStorage(STORAGE_KEYS.USERS, updatedUsers);
-        this.notifyObservers({ type: 'users', data: updatedUsers });
-        
-        // Update selected user/manager if it was the one updated
-        if (this.state.selectedUser?.id === user.id) {
-          this.setState({ selectedUser: user });
-          this.notifyObservers({ type: 'selectedUser', data: user });
-        }
-        if (this.state.selectedManager?.id === user.id) {
-          this.setState({ selectedManager: user });
-          this.notifyObservers({ type: 'selectedManager', data: user });
+        const existingUser = this.state.users.find(u => u.id === user.id);
+        if (existingUser) {
+          const updatedUsers = this.state.users.map(u => 
+            u.id === user.id ? user : u
+          );
+          this.setState({ users: updatedUsers });
+          this.saveToStorage(STORAGE_KEYS.USERS, updatedUsers);
+          this.notifyObservers({ type: 'users', data: updatedUsers });
+          
+          // Update selected user/manager if it was the one updated
+          if (this.state.selectedUser?.id === user.id) {
+            this.setState({ selectedUser: user });
+            this.notifyObservers({ type: 'selectedUser', data: user });
+          }
+          if (this.state.selectedManager?.id === user.id) {
+            this.setState({ selectedManager: user });
+            this.notifyObservers({ type: 'selectedManager', data: user });
+          }
         }
       })
     );
 
     this.signalRUnsubscribers.push(
       signalRService.on('userDeleted', (userId: string) => {
-        const updatedUsers = this.state.users.filter(u => u.id !== userId);
-        this.setState({ users: updatedUsers });
-        this.saveToStorage(STORAGE_KEYS.USERS, updatedUsers);
-        this.notifyObservers({ type: 'users', data: updatedUsers });
-        
-        // Clear selected user/manager if it was deleted
-        if (this.state.selectedUser?.id === userId) {
-          this.setSelectedUser(null);
-        }
-        if (this.state.selectedManager?.id === userId) {
-          this.setSelectedManager(null);
+        const existingUser = this.state.users.find(u => u.id === userId);
+        if (existingUser) {
+          const updatedUsers = this.state.users.filter(u => u.id !== userId);
+          this.setState({ users: updatedUsers });
+          this.saveToStorage(STORAGE_KEYS.USERS, updatedUsers);
+          this.notifyObservers({ type: 'users', data: updatedUsers });
+          
+          // Clear selected user/manager if it was deleted
+          if (this.state.selectedUser?.id === userId) {
+            this.setSelectedUser(null);
+          }
+          if (this.state.selectedManager?.id === userId) {
+            this.setSelectedManager(null);
+          }
         }
       })
     );
@@ -327,14 +345,7 @@ class DataManager {
     try {
       const response = await signalRService.createCompany(data);
       if (response.success && response.data) {
-        const newCompany = response.data;
-        const updatedCompanies = [...this.state.companies, newCompany];
-        
-        this.setState({ companies: updatedCompanies });
-        await this.saveToStorage(STORAGE_KEYS.COMPANIES, updatedCompanies);
-        this.notifyObservers({ type: 'companies', data: updatedCompanies });
-        
-        return newCompany;
+        return response.data;
       }
       return null;
     } catch (error) {
@@ -347,22 +358,7 @@ class DataManager {
     try {
       const response = await signalRService.updateCompany(id, data);
       if (response.success && response.data) {
-        const updatedCompany = response.data;
-        const updatedCompanies = this.state.companies.map(c => 
-          c.id === id ? updatedCompany : c
-        );
-        
-        this.setState({ companies: updatedCompanies });
-        await this.saveToStorage(STORAGE_KEYS.COMPANIES, updatedCompanies);
-        this.notifyObservers({ type: 'companies', data: updatedCompanies });
-        
-        // Update selected company if it was the one updated
-        if (this.state.selectedCompany?.id === id) {
-          this.setState({ selectedCompany: updatedCompany });
-          this.notifyObservers({ type: 'selectedCompany', data: updatedCompany });
-        }
-        
-        return updatedCompany;
+        return response.data;
       }
       return null;
     } catch (error) {
@@ -375,17 +371,6 @@ class DataManager {
     try {
       const response = await signalRService.deleteCompany(id);
       if (response.success && response.data) {
-        const updatedCompanies = this.state.companies.filter(c => c.id !== id);
-        
-        this.setState({ companies: updatedCompanies });
-        await this.saveToStorage(STORAGE_KEYS.COMPANIES, updatedCompanies);
-        this.notifyObservers({ type: 'companies', data: updatedCompanies });
-        
-        // Clear selected company if it was deleted
-        if (this.state.selectedCompany?.id === id) {
-          await this.setSelectedCompany(null);
-        }
-        
         return true;
       }
       return false;
@@ -527,14 +512,7 @@ class DataManager {
     try {
       const response = await signalRService.createUser(data);
       if (response.success && response.data) {
-        const newUser = response.data;
-        const updatedUsers = [...this.state.users, newUser];
-        
-        this.setState({ users: updatedUsers });
-        await this.saveToStorage(STORAGE_KEYS.USERS, updatedUsers);
-        this.notifyObservers({ type: 'users', data: updatedUsers });
-        
-        return newUser;
+        return response.data;
       }
       return null;
     } catch (error) {
@@ -547,26 +525,7 @@ class DataManager {
     try {
       const response = await signalRService.updateUser(id, data);
       if (response.success && response.data) {
-        const updatedUser = response.data;
-        const updatedUsers = this.state.users.map(u => 
-          u.id === id ? updatedUser : u
-        );
-        
-        this.setState({ users: updatedUsers });
-        await this.saveToStorage(STORAGE_KEYS.USERS, updatedUsers);
-        this.notifyObservers({ type: 'users', data: updatedUsers });
-        
-        // Update selected user/manager if it was the one updated
-        if (this.state.selectedUser?.id === id) {
-          this.setState({ selectedUser: updatedUser });
-          this.notifyObservers({ type: 'selectedUser', data: updatedUser });
-        }
-        if (this.state.selectedManager?.id === id) {
-          this.setState({ selectedManager: updatedUser });
-          this.notifyObservers({ type: 'selectedManager', data: updatedUser });
-        }
-        
-        return updatedUser;
+        return response.data;
       }
       return null;
     } catch (error) {
@@ -579,20 +538,6 @@ class DataManager {
     try {
       const response = await signalRService.deleteUser(id);
       if (response.success && response.data) {
-        const updatedUsers = this.state.users.filter(u => u.id !== id);
-        
-        this.setState({ users: updatedUsers });
-        await this.saveToStorage(STORAGE_KEYS.USERS, updatedUsers);
-        this.notifyObservers({ type: 'users', data: updatedUsers });
-        
-        // Clear selected user/manager if it was deleted
-        if (this.state.selectedUser?.id === id) {
-          await this.setSelectedUser(null);
-        }
-        if (this.state.selectedManager?.id === id) {
-          await this.setSelectedManager(null);
-        }
-        
         return true;
       }
       return false;

@@ -39,7 +39,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       const success = await login(email.trim(), password);
       
       if (success) {
-        console.log('Login successful, calling onLoginSuccess');
+
         onLoginSuccess();
       } else {
         Alert.alert('Login Failed', 'Invalid credentials');

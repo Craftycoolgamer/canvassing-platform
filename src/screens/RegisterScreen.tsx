@@ -76,7 +76,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
       const success = await register(registerData);
       
       if (success) {
-        console.log('Registration successful, calling onRegisterSuccess');
+
         Alert.alert(
           'Registration Successful',
           'Your account has been created successfully! Please wait for an administrator or manager to approve your account before you can access the platform. You will be redirected to a pending approval screen.',

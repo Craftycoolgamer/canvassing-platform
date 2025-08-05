@@ -399,7 +399,9 @@ class SignalRService {
         await this.connect();
       }
 
-      const user = await this.connection!.invoke('UpdateUser', id, data);
+      // Create a complete user object with the ID
+      const userData = { id, ...data } as User;
+      const user = await this.connection!.invoke('UpdateUser', userData);
       return { success: true, data: user };
     } catch (error) {
       return { 

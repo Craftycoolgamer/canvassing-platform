@@ -60,7 +60,6 @@ export const BusinessListScreen: React.FC = () => {
   // Refresh data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      console.log('BusinessListScreen focused - refreshing data...');
       syncAllData();
     }, [syncAllData])
   );
@@ -78,7 +77,6 @@ export const BusinessListScreen: React.FC = () => {
     }
 
     setFilteredBusinesses(filtered);
-    console.log('Businesses filtered:', filtered.length);
   }, [businesses, selectedCompany, canManagePins, currentUser]);
 
   // Apply search and status filters
@@ -95,11 +93,6 @@ export const BusinessListScreen: React.FC = () => {
       filtered = searchBusinesses(filtered, searchQuery);
     }
 
-    console.log('filterAndSearchBusinesses - filteredBusinesses:', filteredBusinesses.length);
-    console.log('filterAndSearchBusinesses - statusFilter:', statusFilter);
-    console.log('filterAndSearchBusinesses - searchQuery:', searchQuery);
-    console.log('filterAndSearchBusinesses - final displayedBusinesses:', filtered.length);
-    
     setDisplayedBusinesses(filtered);
   }, [filteredBusinesses, searchQuery, statusFilter]);
 
@@ -115,8 +108,6 @@ export const BusinessListScreen: React.FC = () => {
 
   const handleFormSubmit = async (formData: any) => {
     try {
-      console.log('Saving business...');
-      
       if (editingBusiness) {
         // Update existing business
         await updateBusiness(editingBusiness.id, formData);
@@ -125,7 +116,6 @@ export const BusinessListScreen: React.FC = () => {
         await createBusiness(formData);
       }
 
-      console.log('Business saved successfully');
       setShowFormModal(false);
       setEditingBusiness(null);
     } catch (error) {
@@ -145,9 +135,7 @@ export const BusinessListScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              console.log('Deleting business...');
               await deleteBusiness(business.id);
-              console.log('Business deleted successfully');
             } catch (error) {
               console.error('Error deleting business:', error);
               Alert.alert('Error', 'Failed to delete business');
@@ -193,9 +181,7 @@ export const BusinessListScreen: React.FC = () => {
 
   const renderBusinessItem = ({ item }: { item: Business }) => {
     const company = getCompanyForBusiness(item);
-    console.log('renderBusinessItem - business:', item.name, 'company found:', !!company);
     if (!company) {
-      console.log('renderBusinessItem - no company found for business:', item.name, 'companyId:', item.companyId);
       return null;
     }
 
@@ -306,8 +292,7 @@ export const BusinessListScreen: React.FC = () => {
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={renderEmptyState}
-        onLayout={() => console.log('FlatList onLayout - displayedBusinesses count:', displayedBusinesses.length)}
-        onContentSizeChange={() => console.log('FlatList onContentSizeChange - displayedBusinesses count:', displayedBusinesses.length)}
+
       />
 
       {/* Business Form Modal */}

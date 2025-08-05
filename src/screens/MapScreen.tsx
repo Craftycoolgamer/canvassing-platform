@@ -59,7 +59,6 @@ export const MapScreen: React.FC = () => {
   // Refresh data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      console.log('MapScreen focused - refreshing data...');
       syncAllData();
     }, [syncAllData])
   );
@@ -79,7 +78,7 @@ export const MapScreen: React.FC = () => {
     // Sort businesses by distance from map center
     const sortedBusinesses = sortBusinessesByDistance(filtered, mapCenter.latitude, mapCenter.longitude);
     setFilteredBusinesses(sortedBusinesses);
-    console.log('Businesses filtered and sorted by distance:', sortedBusinesses.length);
+
   }, [businesses, selectedCompany, canManagePins, currentUser, mapCenter]);
 
   // Calculate distance between two coordinates using Haversine formula
@@ -179,9 +178,7 @@ export const MapScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              console.log('Deleting business...');
               await deleteBusiness(business.id);
-              console.log('Business deleted successfully');
               
               // Close the business details modal after successful deletion
               setShowBusinessModal(false);
@@ -198,8 +195,6 @@ export const MapScreen: React.FC = () => {
 
   const handleFormSubmit = async (formData: any) => {
     try {
-      console.log('Saving business...');
-      
       if (editingBusiness) {
         // Update existing business
         await updateBusiness(editingBusiness.id, formData);
@@ -213,7 +208,6 @@ export const MapScreen: React.FC = () => {
         await createBusiness(businessData);
       }
 
-      console.log('Business saved successfully');
       setShowFormModal(false);
       setEditingBusiness(null);
       setSelectedCoordinates(null);

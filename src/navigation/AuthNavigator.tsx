@@ -15,12 +15,12 @@ export const AuthNavigator: React.FC<AuthNavigatorProps> = ({ onAuthSuccess }) =
   const [isLogin, setIsLogin] = useState(true);
 
   const handleLoginSuccess = async () => {
-    console.log('Login successful, triggering auth success');
+    
     onAuthSuccess();
   };
 
   const handleRegisterSuccess = async () => {
-    console.log('Register successful, triggering auth success');
+    
     onAuthSuccess();
   };
 

@@ -38,15 +38,15 @@ export const SettingsScreen: React.FC = () => {
   }, []);
 
   const handleCompanyChange = () => {
-    console.log('Company selection changed, other screens will refresh on focus');
+    
   };
 
   const handleUserChange = () => {
-    console.log('User selection changed');
+    
   };
 
   const handleManagerChange = () => {
-    console.log('Manager selection changed');
+    
   };
 
   const handleLogout = () => {

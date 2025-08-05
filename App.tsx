@@ -13,7 +13,6 @@ const AppContent: React.FC = () => {
   const { isAuthenticated, isLoading, refreshAuth, user, logout } = useAuth();
 
   const handleAuthSuccess = async () => {
-    console.log('Auth success callback triggered');
     // Force a refresh of the auth state
     await refreshAuth();
   };
@@ -30,7 +29,7 @@ const AppContent: React.FC = () => {
     );
   }
 
-  console.log('AppContent render - isAuthenticated:', isAuthenticated, 'user:', user);
+
 
   return (
     <NavigationContainer>

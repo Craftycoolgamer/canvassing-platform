@@ -47,7 +47,7 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
   const handleCompanySelect = async (company: Company) => {
     try {
       await setSelectedCompanyData(company);
-      console.log('Selected company:', company.name);
+      
       
       // Call parent callback if provided
       if (onCompanySelect) {
@@ -67,7 +67,7 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
   const handleClearSelection = async () => {
     try {
       await setSelectedCompanyData(null);
-      console.log('Cleared company selection');
+      
       
       // Notify parent that company selection changed
       if (onCompanyChange) {
@@ -100,11 +100,11 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
           style: 'destructive',
           onPress: async () => {
             try {
-              console.log('Deleting company...');
+      
               const success = await deleteCompany(company.id);
               
               if (success) {
-                console.log('Company deleted successfully');
+
                 
                 // If the deleted company was selected, clear selection
                 if (selectedCompany?.id === company.id) {
@@ -134,7 +134,7 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
   const handleSubmit = async () => {
     if (validateForm()) {
       try {
-        console.log('Saving company...');
+
         
         let result;
         if (editingCompany) {
@@ -144,7 +144,7 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
         }
 
         if (result) {
-          console.log('Company saved successfully');
+
           setShowFormModal(false);
           setEditingCompany(null);
           setFormData({ name: '', pinIcon: 'business', color: '#007AFF' });

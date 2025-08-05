@@ -76,10 +76,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      console.log('AuthContext: Attempting login for:', email);
+  
       const response = await AuthService.login(email, password);
       if (response.success && response.data) {
-        console.log('AuthContext: Login successful, updating user state');
+
         const loggedInUser = response.data.user;
         setUser(loggedInUser);
         
@@ -97,7 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Set the selected company ID to the user's company ID if they have one
         if (loggedInUser.companyId) {
-          console.log('AuthContext: Setting selected company ID to user company ID:', loggedInUser.companyId);
+  
           // Find the company and set it as selected
           const companies = await dataManager.loadCompanies();
           const userCompany = companies.find(c => c.id === loggedInUser.companyId);
@@ -108,7 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         return true;
       }
-      console.log('AuthContext: Login failed');
+      
       return false;
     } catch (error) {
       console.error('AuthContext: Login error:', error);
@@ -118,10 +118,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (userData: any): Promise<boolean> => {
     try {
-      console.log('AuthContext: Attempting registration for:', userData.email);
+      
       const response = await AuthService.register(userData);
       if (response.success && response.data) {
-        console.log('AuthContext: Registration successful, updating user state');
+        
         const registeredUser = response.data.user;
         setUser(registeredUser);
         
@@ -139,7 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Set the selected company ID to the user's company ID if they have one
         if (registeredUser.companyId) {
-          console.log('AuthContext: Setting selected company ID to user company ID:', registeredUser.companyId);
+          
           // Find the company and set it as selected
           const companies = await dataManager.loadCompanies();
           const userCompany = companies.find(c => c.id === registeredUser.companyId);
@@ -150,7 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         return true;
       }
-      console.log('AuthContext: Registration failed');
+      
       return false;
     } catch (error) {
       console.error('AuthContext: Register error:', error);
