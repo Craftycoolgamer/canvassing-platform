@@ -143,11 +143,8 @@ export const MapScreen: React.FC = () => {
   };
 
   const handleMapTap = (latitude: number, longitude: number) => {
-    if (canManagePins) {
-      setSelectedCoordinates({ latitude, longitude });
-      setEditingBusiness(null);
-      setShowFormModal(true);
-    }
+    // Disable map tap functionality for adding pins
+    // Map taps no longer create new businesses
   };
 
   const handleMapCenterChange = (latitude: number, longitude: number) => {
@@ -273,14 +270,28 @@ export const MapScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Businesses</Text>
-        {selectedCompany && (
-          <View style={styles.filterIndicator}>
-            <View style={[styles.companyIcon, { backgroundColor: selectedCompany.color }]}>
-              <MaterialIcons name={selectedCompany.pinIcon as any} size={16} color="white" />
+        <View style={styles.headerActions}>
+          {selectedCompany && (
+            <View style={styles.filterIndicator}>
+              <View style={[styles.companyIcon, { backgroundColor: selectedCompany.color }]}>
+                <MaterialIcons name={selectedCompany.pinIcon as any} size={16} color="white" />
+              </View>
+              <Text style={styles.filterText}>{selectedCompany.name}</Text>
             </View>
-            <Text style={styles.filterText}>{selectedCompany.name}</Text>
-          </View>
-        )}
+          )}
+          {canManagePins && (
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => {
+                setEditingBusiness(null);
+                setSelectedCoordinates(null);
+                setShowFormModal(true);
+              }}
+            >
+              <MaterialIcons name="add-business" size={24} color="#007AFF" />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Map Section */}
@@ -489,6 +500,7 @@ export const MapScreen: React.FC = () => {
             setSelectedCoordinates(null);
           }}
           initialCoordinates={selectedCoordinates}
+          mapCenter={mapCenter}
         />
       </Modal>
     </View>
@@ -507,9 +519,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
     flexDirection: 'row',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  addButton: {
+    padding: 8,
+    marginLeft: 12,
   },
   title: {
     fontSize: 24,

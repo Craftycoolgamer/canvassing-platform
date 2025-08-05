@@ -8,26 +8,32 @@ import {
   Dimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import * as Location from 'expo-location';
 import { Business, Company } from '../types';
-import { Map } from '../components/Map';
+import { Map } from './Map';
 import { useDataManager } from '../hooks/useDataManager';
 
 const { width, height } = Dimensions.get('window');
 
-interface LocationUpdateScreenProps {
+interface LocationUpdateModalProps {
   business: Business;
-  company: Company;
+  companies: Company[];
+  onClose: () => void;
+  onLocationUpdate: (updatedBusiness: Business) => void;
+  initialPosition?: { latitude: number; longitude: number };
 }
 
-export const LocationUpdateScreen: React.FC = () => {
-  const navigation = useNavigation();
-  const route = useRoute();
-  const { business, company } = route.params as LocationUpdateScreenProps;
-  
+export const LocationUpdateModal: React.FC<LocationUpdateModalProps> = ({
+  business,
+  companies,
+  onClose,
+  onLocationUpdate,
+  initialPosition,
+}) => {
+  const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
   const [currentLocation, setCurrentLocation] = useState({
-    latitude: business.latitude,
-    longitude: business.longitude,
+    latitude: initialPosition?.latitude ?? business.latitude,
+    longitude: initialPosition?.longitude ?? business.longitude,
   });
   const [isUpdating, setIsUpdating] = useState(false);
   const mapRef = useRef<any>(null);
@@ -36,6 +42,33 @@ export const LocationUpdateScreen: React.FC = () => {
   const {
     updateBusiness,
   } = useDataManager();
+
+  const company = companies.find(c => c.id === business.companyId);
+
+  // Get user location when component mounts (only as fallback)
+  useEffect(() => {
+    const getUserLocation = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const location = await Location.getCurrentPositionAsync({});
+          setUserLocation(location);
+          
+          // For new businesses without initialPosition, start with user location
+          if (business.id === 'temp' && !initialPosition && (business.latitude === 0 || business.longitude === 0)) {
+            setCurrentLocation({
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error getting location:', error);
+      }
+    };
+
+    getUserLocation();
+  }, [business.id, business.latitude, business.longitude, initialPosition]);
 
   const handleMapCenterChange = (latitude: number, longitude: number) => {
     setCurrentLocation({ latitude, longitude });
@@ -53,6 +86,13 @@ export const LocationUpdateScreen: React.FC = () => {
         longitude: currentLocation.longitude,
       };
 
+      // If this is a new business (temp id), don't save to database yet
+      if (business.id === 'temp') {
+        onLocationUpdate(updatedBusiness);
+        return;
+      }
+
+      // For existing businesses, update in database
       await updateBusiness(business.id, updatedBusiness);
 
       Alert.alert(
@@ -61,7 +101,9 @@ export const LocationUpdateScreen: React.FC = () => {
         [
           {
             text: 'OK',
-            onPress: () => navigation.goBack(),
+            onPress: () => {
+              onLocationUpdate(updatedBusiness);
+            },
           },
         ]
       );
@@ -74,18 +116,35 @@ export const LocationUpdateScreen: React.FC = () => {
   };
 
   const handleCancel = () => {
-    navigation.goBack();
+    onClose();
   };
+
+  if (!company) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Update Location</Text>
+          <TouchableOpacity onPress={handleCancel} style={styles.closeButton}>
+            <MaterialIcons name="close" size={24} color="#666" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Company not found</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleCancel} style={styles.backButton}>
-          <MaterialIcons name="arrow-back" size={24} color="#007AFF" />
+        <Text style={styles.title}>
+          {business.id === 'temp' ? 'Set Location' : 'Update Location'}
+        </Text>
+        <TouchableOpacity onPress={handleCancel} style={styles.closeButton}>
+          <MaterialIcons name="close" size={24} color="#666" />
         </TouchableOpacity>
-        <Text style={styles.title}>Update Location</Text>
-        <View style={styles.placeholder} />
       </View>
 
       {/* Business Info */}
@@ -103,8 +162,8 @@ export const LocationUpdateScreen: React.FC = () => {
           onMarkerPress={() => {}}
           onMapCenterChange={handleMapCenterChange}
           initialCenter={{
-            latitude: business.latitude,
-            longitude: business.longitude,
+            latitude: currentLocation.latitude,
+            longitude: currentLocation.longitude,
           }}
         />
         
@@ -117,7 +176,10 @@ export const LocationUpdateScreen: React.FC = () => {
       {/* Instructions */}
       <View style={styles.instructions}>
         <Text style={styles.instructionsText}>
-          Move the map to position the pin at the correct location
+          {business.id === 'temp' 
+            ? 'Move the map to set the location for your new business'
+            : 'Move the map to position the pin at the correct location'
+          }
         </Text>
       </View>
 
@@ -138,7 +200,9 @@ export const LocationUpdateScreen: React.FC = () => {
           {isUpdating ? (
             <Text style={styles.updateButtonText}>Updating...</Text>
           ) : (
-            <Text style={styles.updateButtonText}>Update Location</Text>
+            <Text style={styles.updateButtonText}>
+              {business.id === 'temp' ? 'Set Location' : 'Update Location'}
+            </Text>
           )}
         </TouchableOpacity>
       </View>
@@ -156,22 +220,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 50,
+    paddingTop: 16,
     paddingBottom: 16,
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-  },
-  backButton: {
-    padding: 8,
   },
   title: {
     fontSize: 18,
     fontWeight: '600',
     color: '#1a1a1a',
   },
-  placeholder: {
-    width: 40,
+  closeButton: {
+    padding: 4,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#666',
   },
   businessInfo: {
     backgroundColor: 'white',

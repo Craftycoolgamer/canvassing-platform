@@ -9,9 +9,7 @@ interface BusinessCardProps {
   company: Company;
   onPress: () => void;
   onAssign?: () => void;
-  onUpdateLocation?: () => void;
   showAssignButton?: boolean;
-  showUpdateLocationButton?: boolean;
 }
 
 export const BusinessCard: React.FC<BusinessCardProps> = ({
@@ -19,9 +17,7 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
   company,
   onPress,
   onAssign,
-  onUpdateLocation,
   showAssignButton = false,
-  showUpdateLocationButton = false,
 }) => {
   return (
     <TouchableOpacity style={styles.container} onPress={onPress}>
@@ -113,20 +109,7 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({
             </TouchableOpacity>
           )}
           
-          {showUpdateLocationButton && onUpdateLocation && (
-            <TouchableOpacity
-              style={styles.updateLocationButton}
-              onPress={(e) => {
-                e.stopPropagation();
-                onUpdateLocation();
-              }}
-            >
-              <MaterialIcons name="location-on" size={16} color="#007AFF" />
-              <Text style={styles.updateLocationButtonText}>
-                Update Location
-              </Text>
-            </TouchableOpacity>
-          )}
+
         </View>
       </View>
     </TouchableOpacity>
@@ -238,23 +221,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontWeight: '500',
   },
-  updateLocationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    backgroundColor: 'transparent',
-    marginLeft: 8,
-  },
-  updateLocationButtonText: {
-    fontSize: 12,
-    color: '#007AFF',
-    marginLeft: 4,
-    fontWeight: '500',
-  },
+
   notesContainer: {
     flex: 1,
     marginLeft: 8,

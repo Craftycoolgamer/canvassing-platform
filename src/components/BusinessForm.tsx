@@ -10,9 +10,11 @@ import {
   Modal,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { Business, Company, BusinessFormData } from '../types';
 import { validateEmail, validatePhone, validateWebsite } from '../utils';
 import { useAuth } from '../contexts/AuthContext';
+import { LocationUpdateModal } from './LocationUpdateModal';
 
 // Phone number formatting function
 const formatPhoneNumber = (input: string): string => {
@@ -46,6 +48,7 @@ interface BusinessFormProps {
   onSubmit: (data: BusinessFormData) => void;
   onCancel: () => void;
   initialCoordinates?: { latitude: number; longitude: number } | null;
+  mapCenter?: { latitude: number; longitude: number };
 }
 
 export const BusinessForm: React.FC<BusinessFormProps> = ({
@@ -54,12 +57,14 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
   onSubmit,
   onCancel,
   initialCoordinates,
+  mapCenter,
 }) => {
   console.log('BusinessForm - companies received:', companies.length);
   console.log('BusinessForm - companies:', companies);
 
   const { user: currentUser } = useAuth();
   const canManagePins = currentUser?.canManagePins || false;
+  const navigation = useNavigation();
 
   const [formData, setFormData] = useState<BusinessFormData>({
     name: '',
@@ -74,8 +79,9 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
     status: 'pending',
   });
 
-  const [errors, setErrors] = useState<Partial<BusinessFormData>>({});
+  const [errors, setErrors] = useState<Partial<BusinessFormData> & { location?: string }>({});
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
 
   useEffect(() => {
     if (business) {
@@ -120,7 +126,7 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
   }, [business, companies, initialCoordinates, currentUser]);
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<BusinessFormData> = {};
+    const newErrors: Partial<BusinessFormData> & { location?: string } = {};
 
     if (!formData.name.trim()) {
       newErrors.name = 'Business name is required';
@@ -132,6 +138,11 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
 
     if (!formData.companyId) {
       newErrors.companyId = 'Company is required';
+    }
+
+    // Location is required for new businesses
+    if (!business && (formData.latitude === 0 || formData.longitude === 0)) {
+      newErrors.location = 'Location is required';
     }
 
     if (formData.phone && !isValidPhoneNumber(formData.phone)) {
@@ -233,6 +244,30 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
           />
           {errors.address && <Text style={styles.errorText}>{errors.address}</Text>}
         </View>
+
+        {canManagePins && (
+          <View style={styles.field}>
+            <Text style={styles.label}>Location{!business && ' *'}</Text>
+            <TouchableOpacity
+              style={styles.locationButton}
+              onPress={() => setShowLocationModal(true)}
+            >
+              <View style={styles.locationButtonLeft}>
+                <MaterialIcons name="location-on" size={20} color="#007AFF" />
+                <Text style={styles.locationButtonText}>
+                  {(formData.latitude !== 0 || formData.longitude !== 0) ? 'Change Location' : 'Set Location'}
+                </Text>
+              </View>
+              {(formData.latitude !== 0 || formData.longitude !== 0) ? (
+                <MaterialIcons name="check-circle" size={20} color="#34C759" />
+              ) : (
+                <MaterialIcons name="info" size={20} color="#FFA500" />
+              )}
+            </TouchableOpacity>
+            
+            {errors.location && <Text style={styles.errorText}>{errors.location}</Text>}
+          </View>
+        )}
 
         <View style={styles.field}>
           <Text style={styles.label}>Email</Text>
@@ -427,6 +462,48 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Location Update Modal */}
+      {showLocationModal && (
+        <Modal
+          visible={showLocationModal}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowLocationModal(false)}
+        >
+          <LocationUpdateModal
+            business={business || {
+              id: 'temp',
+              name: formData.name || 'New Business',
+              address: formData.address || '',
+              phone: formData.phone || '',
+              email: formData.email || '',
+              website: formData.website || '',
+              notes: formData.notes || [],
+              latitude: formData.latitude || 0,
+              longitude: formData.longitude || 0,
+              companyId: formData.companyId || '',
+              status: formData.status,
+              assignedUserId: '',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              lastContactDate: undefined,
+            }}
+            companies={companies}
+            onClose={() => setShowLocationModal(false)}
+            onLocationUpdate={(updatedBusiness) => {
+              // Update the form data with new coordinates
+              setFormData(prev => ({
+                ...prev,
+                latitude: updatedBusiness.latitude,
+                longitude: updatedBusiness.longitude,
+              }));
+              setShowLocationModal(false);
+            }}
+            initialPosition={mapCenter}
+          />
+        </Modal>
+      )}
     </ScrollView>
   );
 };
@@ -651,4 +728,26 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '500',
   },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+  },
+  locationButtonLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  locationButtonText: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+
+
 }); 

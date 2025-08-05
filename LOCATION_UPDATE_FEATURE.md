@@ -6,12 +6,13 @@ This feature allows users with pin management permissions to update the location
 ## How it works
 
 ### 1. Business List Screen
-- Users with `canManagePins` permission will see an "Update Location" button on each business card
-- The button appears next to the "Assign" button (if applicable)
+- Users can edit businesses to update their location
+- The location update functionality is integrated into the business edit form
 
-### 2. Location Update Screen
-When the "Update Location" button is pressed, users are taken to a dedicated screen with:
-- A map showing the current business location
+### 2. Business Edit Form
+When editing a business, users can access location update functionality:
+- A "Set Location" or "Change Location" button in the business form
+- A modal with a map showing the current business location
 - A center icon indicating where the new location will be set
 - Instructions to move the map to position the pin correctly
 - Cancel and Update Location buttons
@@ -30,11 +31,10 @@ When the "Update Location" button is pressed, users are taken to a dedicated scr
 ## Technical Implementation
 
 ### Files Added/Modified:
-1. **`src/screens/LocationUpdateScreen.tsx`** - New screen for location updating
-2. **`src/components/BusinessCard.tsx`** - Added update location button
-3. **`src/screens/BusinessListScreen.tsx`** - Added navigation to location update screen
-4. **`src/navigation/BusinessStackNavigator.tsx`** - New stack navigator for business list
-5. **`src/navigation/AppNavigator.tsx`** - Updated to use stack navigator
+1. **`src/components/LocationUpdateModal.tsx`** - Modal component for location updating
+2. **`src/components/BusinessForm.tsx`** - Integrated location update functionality
+3. **`src/screens/BusinessListScreen.tsx`** - Removed redundant location update button
+4. **`src/components/BusinessCard.tsx`** - Removed redundant location update button
 
 ### Key Features:
 - **Permission-based access**: Only users with `canManagePins` can see the update location button
@@ -51,10 +51,11 @@ When the "Update Location" button is pressed, users are taken to a dedicated scr
 
 1. Navigate to the Business List screen
 2. Find a business that needs location correction
-3. Tap the "Update Location" button (only visible if you have pin management permissions)
-4. Move the map to position the center icon at the correct location
-5. Tap "Update Location" to save the new coordinates
-6. Confirm the success message to return to the business list
+3. Tap on the business to edit it
+4. In the business edit form, tap the "Change Location" button
+5. Move the map to position the center icon at the correct location
+6. Tap "Update Location" to save the new coordinates
+7. Complete the business edit form to save all changes
 
 ## Permissions
 - **Required**: `canManagePins` user permission

@@ -17,7 +17,7 @@ import { BusinessForm } from '../components/BusinessForm';
 import { searchBusinesses, filterBusinessesByStatus } from '../utils';
 import { BusinessStatusNotesModal } from '../components/BusinessStatusNotesModal';
 import { BusinessAssignmentModal } from '../components/BusinessAssignmentModal';
-import { LocationUpdateScreen } from './LocationUpdateScreen';
+
 import { useAuth } from '../contexts/AuthContext';
 import { useDataManager } from '../hooks/useDataManager';
 
@@ -185,12 +185,7 @@ export const BusinessListScreen: React.FC = () => {
     syncAllData(); // Refresh the data after assignment change
   };
 
-  const handleUpdateLocation = (business: Business) => {
-    const company = getCompanyForBusiness(business);
-    if (company) {
-      (navigation as any).navigate('LocationUpdate', { business, company });
-    }
-  };
+
 
   const getCompanyForBusiness = (business: Business) => {
     return companies.find(company => company.id === business.companyId);
@@ -210,9 +205,7 @@ export const BusinessListScreen: React.FC = () => {
         company={company}
         onPress={() => handleBusinessPress(item)}
         onAssign={() => handleBusinessAssignment(item)}
-        onUpdateLocation={() => handleUpdateLocation(item)}
         showAssignButton={currentUser?.role === 'Admin' || currentUser?.role === 'Manager'}
-        showUpdateLocationButton={canManagePins}
       />
     );
   };
@@ -357,6 +350,8 @@ export const BusinessListScreen: React.FC = () => {
           onAssignmentChange={handleAssignmentChange}
         />
       )}
+
+
     </View>
   );
 };
