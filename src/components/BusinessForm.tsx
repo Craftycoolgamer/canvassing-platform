@@ -249,7 +249,7 @@ export const BusinessForm: React.FC<BusinessFormProps> = ({
           <View style={styles.field}>
             <Text style={styles.label}>Location{!business && ' *'}</Text>
             <TouchableOpacity
-              style={styles.locationButton}
+              style={[styles.input, errors.location && styles.inputError, styles.locationButton]}
               onPress={() => setShowLocationModal(true)}
             >
               <View style={styles.locationButtonLeft}>
@@ -732,11 +732,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 12,
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
   },
   locationButtonLeft: {
     flexDirection: 'row',
@@ -744,7 +739,7 @@ const styles = StyleSheet.create({
   },
   locationButtonText: {
     fontSize: 16,
-    color: '#007AFF',
+    color: '#1a1a1a',
     fontWeight: '500',
     marginLeft: 8,
   },
