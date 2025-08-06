@@ -54,7 +54,7 @@ The canvassing platform now includes a profile approval system where new user re
 - `PendingApprovalsScreen.tsx` - For admins/managers to review approvals
 
 #### Updated Components
-- `AppNavigator.tsx` - Added "Pending Approvals" tab for admins/managers
+- `CustomTabNavigator.tsx` - Added "Pending Approvals" tab for admins/managers (replaces AppNavigator)
 - `App.tsx` - Added logic to show pending approval screen for unapproved users
 - `AuthContext.tsx` - Updated User interface to include `isApproved` field
 

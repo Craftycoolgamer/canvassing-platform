@@ -4,7 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
-import { AppNavigator } from './src/navigation/AppNavigator';
+import { NavigationProvider } from './src/contexts/NavigationContext';
+import { CustomTabNavigator } from './src/components/CustomTabNavigator';
 import { AuthNavigator } from './src/navigation/AuthNavigator';
 import { PendingApprovalScreen } from './src/screens/PendingApprovalScreen';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
@@ -38,7 +39,7 @@ const AppContent: React.FC = () => {
         user && !user.isApproved && user.role !== 'Admin' ? (
           <PendingApprovalScreen onLogout={handleLogout} />
         ) : (
-          <AppNavigator />
+          <CustomTabNavigator />
         )
       ) : (
         <AuthNavigator onAuthSuccess={handleAuthSuccess} />
@@ -51,7 +52,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <AppContent />
+        <NavigationProvider>
+          <AppContent />
+        </NavigationProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

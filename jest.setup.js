@@ -55,8 +55,7 @@ jest.mock('@expo/vector-icons', () => ({
   Ionicons: 'Ionicons',
 }));
 
-// Mock react-native-vector-icons
-jest.mock('react-native-vector-icons/MaterialIcons', () => 'MaterialIcons');
+
 
 // Global test utilities
 global.console = {
